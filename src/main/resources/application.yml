@@ -1,8 +1,0 @@
-spring:
-  application:
-    name: IDSISTEMA
-
-sistema-dueno:
-  base-url: http://nachintoch.mx:8080
-  connect-timeout: 2s
-  read-timeout: 5s
