@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -19,9 +19,16 @@
 		<java.version>25</java.version>
 	</properties>
 	<dependencies>
+		<!-- Provee soporte para RestClient y endpoints REST tradicionales -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-webmvc</artifactId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+
+		<!-- Provee soporte para WebClient (cliente reactivo/asincrónico) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webflux</artifactId>
 		</dependency>
 
 		<dependency>
@@ -39,21 +46,21 @@
 			</plugin>
 
 			<plugin>
-			  <groupId>org.apache.maven.plugins</groupId>
-			  <artifactId>maven-checkstyle-plugin</artifactId>
-			  <version>3.6.0</version>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>3.6.0</version>
 
-			  <configuration>
-				<configLocation>config/checkstyle/checkstyle.xml</configLocation>
-			  </configuration>
+				<configuration>
+					<configLocation>config/checkstyle/checkstyle.xml</configLocation>
+				</configuration>
 
-			  <dependencies>
-				<dependency>
-				  <groupId>com.puppycrawl.tools</groupId>
-				  <artifactId>checkstyle</artifactId>
-				  <version>10.21.0</version>
-				</dependency>
-			  </dependencies>
+				<dependencies>
+					<dependency>
+						<groupId>com.puppycrawl.tools</groupId>
+						<artifactId>checkstyle</artifactId>
+						<version>10.21.0</version>
+					</dependency>
+				</dependencies>
 
 			</plugin>
 		</plugins>
