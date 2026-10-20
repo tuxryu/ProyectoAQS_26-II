@@ -10,7 +10,7 @@ Documento de referencia para todo el equipo (**404 Equipo no Encontrado**). Conc
 
 ### Decisiones de arquitectura para este hito
 1. **Monolito Modular con Arquitectura Limpia**: Los 3 contextos delimitados (`clientes`, `polizas`, `beneficiarios`) viven en un mismo proyecto ejecutable de Spring Boot (`:8080`), aislados mediante puertos de entrada (`port/in`) y puertos de salida (`port/out`).
-2. **Modelos con Hibernate JPA (Objetivo 2.4.2)**: Las entidades de Capa 1 (`Cliente`, `Poliza`, `Beneficiario` y `BeneficiarioId`) usan las anotaciones de `jakarta.persistence` (`@Entity`, `@Id`, `@Embeddable`, `@EmbeddedId`) provistas por `hibernate-core` para mapear hacia y desde el Sistema Dueño, operando 100% en tránsito (sin base de datos local).
+2. **Modelos con Hibernate JPA (Objetivo 2.4.2)**: Las entidades de Capa 1 (`Cliente`, `Poliza`, `Beneficiario` y `BeneficiarioId`) usan las anotaciones de `jakarta.persistence` (`@Entity`, `@Id`, `@Embeddable`, `@EmbeddedId`) para mapear hacia y desde el Sistema Dueño, operando 100% en tránsito (sin base de datos local).
 3. **Comunicación entre módulos en memoria**: `PolizaService` valida al titular mediante su puerto de salida `ClienteServicioPort` (implementado por `ClienteModuloAdapter`, que invoca `ConsultarClienteUseCase` en memoria). De igual forma, `BeneficiarioService` valida la póliza mediante `PolizaServicioPort` (`PolizaModuloAdapter` → `ConsultaPolizaUseCase`).
 4. **Regla de Dependencia verificada con ArchUnit (`ArquitecturaLimpiaTest`)**:
    - `domain` no importa nada de Spring (`org.springframework..`), `application`, `adapter` ni `ui`.
@@ -19,7 +19,7 @@ Documento de referencia para todo el equipo (**404 Equipo no Encontrado**). Conc
 
 ---
 
-## 2. Estructura Oficial de Carpetas
+## 2. Estructura de Carpetas
 
 ```text
 ProyectoAQS_26-II/
@@ -28,7 +28,7 @@ ProyectoAQS_26-II/
 │   └── CODEOWNERS
 ├── .mvn/ , mvnw, mvnw.cmd              → Maven Wrapper
 ├── config/checkstyle/
-│   └── checkstyle.xml                  → Reglas de estilo OpenJDK (Checkstyle 14.3.0)
+│   └── checkstyle.xml                  → Reglas de estilo Checkstyle 14.3.0
 ├── docs/                               → Diagrama PlantUML, guía técnica, ERS y catálogo de endpoints
 ├── pom.xml                             → Spring Boot 4.1.1, Java 25, WebMVC, Thymeleaf, Hibernate, ArchUnit
 └── src/
@@ -91,7 +91,7 @@ ProyectoAQS_26-II/
     │   │       │   │   └── exception/                 (SistemaDuenoNoDisponibleException [503], SistemaDuenoRechazoException [502])
     │   │       │   └── adapter/in/web/                (GlobalExceptionHandler.java)
     │   │       │
-    │   │       └── ui/                                (Capa 4 / Interfaz Web Thymeleaf)
+    │   │       └── ui/                                Capa 4 / Interfaz Web
     │   │           └── web/
     │   │               ├── HomeViewController.java    (Mapea a "/" y menú de los 8 casos de uso)
     │   │               ├── ClienteViewController.java
@@ -117,7 +117,7 @@ ProyectoAQS_26-II/
 
 ---
 
-## 3. Reglas por Caso de Uso (Criterios de Aceptación)
+## 3. Reglas por Caso de Uso, Criterios de Aceptación.
 
 | Caso de uso | Antes de escribir | Escritura hacia Sistema Dueño | Después de escribir |
 |---|---|---|---|
@@ -181,7 +181,7 @@ ProyectoAQS_26-II/
 2. Segmentos de ruta **codificados** (`%`, `?`, acentos); se rechazan `/` y `\` antes de invocar al servidor porque `%2F` produce error `400` en Tomcat (hallazgos 12 y 21).
 3. Lectura individual con **`200` y cuerpo vacío** → `Optional.empty()` → `404`. Listas vacías **`[]`** → página vacía, no es error (hallazgo 3).
 4. **Tolerancia fila por fila**: al listar pólizas, convertir cada elemento a `Poliza` dentro de un bloque `try/catch`; si una fila de otro equipo tiene datos corruptos (p. ej. `tipo=7`), se omite y se registra con `log.warn` sin romper toda la consulta (hallazgo 16).
-5. **Fechas** convertidas con `FechasSistemaDueno` (`timestamp` UTC → `LocalDate` en zona `America/Mexico_City`, contemplando el desfase histórico de 1920 `06:36:36Z`) (hallazgo 2).
+5. **Fechas** convertidas con `FechasSistemaDueno` (`timestamp` UTC → `LocalDate` en zona `America/Mexico_City`) (hallazgo 2).
 6. **Mapeo de errores**: HTTP `500` remoto → `502` (`SistemaDuenoRechazoException`); HTTP `502`/`503`/`504`, timeout o fallo de red → `503` (`SistemaDuenoNoDisponibleException`) (hallazgo 10).
 7. **Paginación en memoria** dentro de `PolizaService` (ya que el Sistema Dueño no pagina), ordenando por `clave` para mantener estabilidad entre páginas.
 
