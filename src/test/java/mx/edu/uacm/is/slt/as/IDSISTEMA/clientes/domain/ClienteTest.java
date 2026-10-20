@@ -65,6 +65,6 @@ class ClienteTest {
 
         assertEquals("La fecha de nacimiento no puede ser nula.", exception.getMessage());
     }
-    
+
 }
 

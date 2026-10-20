@@ -1,23 +1,35 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import java.time.LocalDate;
 
+@Entity
+@Table(name = "clientes")
 public class Cliente {
 
-    private String curp; // PK, 18 caracteres
-    private String nombres;
-    private String primerApellido;
-    private String segundoApellido; // Opcional
+    @EmbeddedId
+    private ClienteId id;
+
+    @Column(name = "segundo_apellido")
+    private String segundoApellido;
+
+    @Column(name = "direccion", nullable = false)
     private String direccion;
+
+    @Column(name = "fecha_nacimiento", nullable = false)
     private LocalDate fechaNacimiento;
+
+    // JPA requiere un constructor vacío
+    protected Cliente() {}
 
     public Cliente(String curp, String nombres, String primerApellido, String segundoApellido, String direccion, LocalDate fechaNacimiento) {
         validarCamposObligatorios(curp, nombres, primerApellido, direccion, fechaNacimiento);
         validarCurp(curp);
 
-        this.curp = curp;
-        this.nombres = nombres;
-        this.primerApellido = primerApellido;
+        this.id = new ClienteId(curp, nombres, primerApellido);
         this.segundoApellido = segundoApellido;
         this.direccion = direccion;
         this.fechaNacimiento = fechaNacimiento;
@@ -47,9 +59,10 @@ public class Cliente {
         }
     }
 
-    public String getCurp() { return curp; }
-    public String getNombres() { return nombres; }
-    public String getPrimerApellido() { return primerApellido; }
+    public ClienteId getId() { return id; }
+    public String getCurp() { return id != null ? id.getCurp() : null; }
+    public String getNombres() { return id != null ? id.getNombres() : null; }
+    public String getPrimerApellido() { return id != null ? id.getPrimerApellido() : null; }
     public String getSegundoApellido() { return segundoApellido; }
     public String getDireccion() { return direccion; }
     public LocalDate getFechaNacimiento() { return fechaNacimiento; }
