@@ -31,9 +31,23 @@ class ArquitecturaLimpiaTest {
 
     @ArchTest
     static final ArchRule CLIENTES_DOMAIN_AISLADO = noClasses()
-            .that().resideInAPackage("..clientes.domain..")
+            .that().resideInAnyPackage("..clientes.domain..", "..clientes.application..")
             .should().dependOnClassesThat().resideInAnyPackage(
                     "..polizas..", "..beneficiarios..")
+            .allowEmptyShould(true);
+
+    @ArchTest
+    static final ArchRule POLIZAS_CORE_AISLADO = noClasses()
+            .that().resideInAnyPackage("..polizas.domain..", "..polizas.application..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..clientes..", "..beneficiarios..")
+            .allowEmptyShould(true);
+
+    @ArchTest
+    static final ArchRule BENEFICIARIOS_CORE_AISLADO = noClasses()
+            .that().resideInAnyPackage("..beneficiarios.domain..", "..beneficiarios.application..")
+            .should().dependOnClassesThat().resideInAnyPackage(
+                    "..clientes..", "..polizas..")
             .allowEmptyShould(true);
 
 }
