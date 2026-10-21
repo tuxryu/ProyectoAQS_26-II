@@ -1,4 +1,4 @@
-﻿# Documentacion
+# Documentacion
 
 | Archivo | Contenido |
 |---|---|
