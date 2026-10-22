@@ -1,47 +1,35 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model;
 
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.UUID;
-
-import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapsId;
-import jakarta.persistence.Table;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
 
-import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
-
+/**
+ * Entidad de dominio que representa un beneficiario de una poliza.
+ */
 @Entity
-@Table(name = "beneficiario_poliza")
 public class Beneficiario {
+
+    private static final int PORCENTAJE_MINIMO = 1;
+    private static final int PORCENTAJE_MAXIMO = 100;
 
     @EmbeddedId
     private BeneficiarioId id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @MapsId("clavePoliza")
-    @JoinColumn(name = "clave_poliza", nullable = false)
-    private Poliza poliza;
+    private int porcentaje;
 
-    @NotBlank
-    @Column(name = "segundo_apellido", length = 128)
-    private String segundoApellido;
+    protected Beneficiario() {
+    }
 
-    @NotNull
-    @Min(1)
-    @Max(100)
-    @Column(name = "porcentaje", nullable = false)
-    private Integer porcentaje;
-
-    public Beneficiario() {
+    public Beneficiario(BeneficiarioId id, int porcentaje) {
+        if (id == null) {
+            throw new IllegalArgumentException("El identificador del beneficiario es obligatorio.");
+        }
+        validarPorcentaje(porcentaje);
+        this.id = id;
+        this.porcentaje = porcentaje;
     }
 
     public Beneficiario(
@@ -49,18 +37,18 @@ public class Beneficiario {
             String primerApellido,
             String segundoApellido,
             LocalDate fechaNacimiento,
-            Poliza poliza,
-            Integer porcentaje) {
+            UUID clavePoliza,
+            int porcentaje) {
+        this(
+                new BeneficiarioId(
+                        nombres, primerApellido, segundoApellido, fechaNacimiento, clavePoliza),
+                porcentaje);
+    }
 
-        this.id = new BeneficiarioId(
-                poliza != null ? poliza.getClave() : null,
-                fechaNacimiento,
-                nombres,
-                primerApellido);
-
-        this.poliza = poliza;
-        this.segundoApellido = segundoApellido;
-        this.porcentaje = porcentaje;
+    private void validarPorcentaje(int valorPorcentaje) {
+        if (valorPorcentaje < PORCENTAJE_MINIMO || valorPorcentaje > PORCENTAJE_MAXIMO) {
+            throw new IllegalArgumentException("El porcentaje debe estar entre 1 y 100.");
+        }
     }
 
     public BeneficiarioId getId() {
@@ -71,18 +59,6 @@ public class Beneficiario {
         this.id = id;
     }
 
-    public Poliza getPoliza() {
-        return poliza;
-    }
-
-    public void setPoliza(Poliza poliza) {
-        this.poliza = poliza;
-
-        if (this.id != null && poliza != null) {
-            this.id.setClavePoliza(poliza.getClave());
-        }
-    }
-
     public String getNombres() {
         return id != null ? id.getNombres() : null;
     }
@@ -91,23 +67,40 @@ public class Beneficiario {
         return id != null ? id.getPrimerApellido() : null;
     }
 
+    public String getSegundoApellido() {
+        return id != null ? id.getSegundoApellido() : null;
+    }
+
     public LocalDate getFechaNacimiento() {
         return id != null ? id.getFechaNacimiento() : null;
     }
 
-    public String getSegundoApellido() {
-        return segundoApellido;
+    public UUID getClavePoliza() {
+        return id != null ? id.getClavePoliza() : null;
     }
 
-    public void setSegundoApellido(String segundoApellido) {
-        this.segundoApellido = segundoApellido;
-    }
-
-    public Integer getPorcentaje() {
+    public int getPorcentaje() {
         return porcentaje;
     }
 
-    public void setPorcentaje(Integer porcentaje) {
+    public void setPorcentaje(int porcentaje) {
+        validarPorcentaje(porcentaje);
         this.porcentaje = porcentaje;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof Beneficiario other)) {
+            return false;
+        }
+        return porcentaje == other.porcentaje && Objects.equals(id, other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, porcentaje);
     }
 }
