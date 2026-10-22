@@ -43,39 +43,39 @@ public class Poliza {
         return clave;
     }
 
-    public void setClave(UUID clave) {
-        this.clave = clave;
+    public void setClave(UUID claves) {
+        this.clave = claves;
     }
 
     public byte getTipo() {
         return tipo;
     }
 
-    public void setTipo(byte tipo) {
-        this.tipo = tipo;
+    public void setTipo(byte tipos) {
+        this.tipo = tipos;
     }
 
     public float getMonto() {
         return monto;
     }
 
-    public void setMonto(float monto) {
-        this.monto = monto;
+    public void setMonto(float montos) {
+        this.monto = montos;
     }
 
     public String getDescripcion() {
         return descripcion;
     }
 
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
+    public void setDescripcion(String descripcions) {
+        this.descripcion = descripcions;
     }
 
     public String getCurpCliente() {
         return curpCliente;
     }
 
-    public void setCurpCliente(String curpCliente) {
-        this.curpCliente = curpCliente;
+    public void setCurpCliente(String curpClientes) {
+        this.curpCliente = curpClientes;
     }
 }
