@@ -12,11 +12,13 @@
 	<groupId>mx.edu.uacm.is.slt.as</groupId>
 	<artifactId>IDSISTEMA</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
+	<name>IDSISTEMA</name>
+	<description>Sistema intermediario de polizas de seguro (prototipo, Arquitectura Limpia)</description>
 	<url/>
 	<properties>
 		<java.version>25</java.version>
+		<archunit.version>1.4.1</archunit.version>
+		<checkstyle.version>14.3.0</checkstyle.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -26,7 +28,24 @@
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-core</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.tngtech.archunit</groupId>
+			<artifactId>archunit-junit5</artifactId>
+			<version>${archunit.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -44,7 +63,10 @@
 			  <version>3.6.0</version>
 
 			  <configuration>
-				<configLocation>config/checkstyle/checkstyle.xml</configLocation>
+				<configLocation>${project.basedir}/config/checkstyle/checkstyle.xml</configLocation>
+				<includeTestSourceDirectory>true</includeTestSourceDirectory>
+				<consoleOutput>true</consoleOutput>
+				<violationSeverity>warning</violationSeverity>
 			  </configuration>
 
 			  <dependencies>
