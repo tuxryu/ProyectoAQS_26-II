@@ -97,58 +97,58 @@ public class Cliente {
         return curp;
     }
 
-    public void setCurp(String curp) {
-        validarCurp(curp);
-        this.curp = curp;
+    public void setCurp(String nuevoCurp) {
+        validarCurp(nuevoCurp);
+        this.curp = nuevoCurp;
     }
 
     public String getNombres() {
         return nombres;
     }
 
-    public void setNombres(String nombres) {
-        validarTextoObligatorio(nombres, "El nombre", LONGITUD_MAXIMA_NOMBRE);
-        this.nombres = nombres;
+    public void setNombres(String nuevosNombres) {
+        validarTextoObligatorio(nuevosNombres, "El nombre", LONGITUD_MAXIMA_NOMBRE);
+        this.nombres = nuevosNombres;
     }
 
     public String getPrimerApellido() {
         return primerApellido;
     }
 
-    public void setPrimerApellido(String primerApellido) {
+    public void setPrimerApellido(String nuevoPrimerApellido) {
         validarTextoObligatorio(
-                primerApellido, "El primer apellido", LONGITUD_MAXIMA_NOMBRE);
-        this.primerApellido = primerApellido;
+                nuevoPrimerApellido, "El primer apellido", LONGITUD_MAXIMA_NOMBRE);
+        this.primerApellido = nuevoPrimerApellido;
     }
 
     public String getSegundoApellido() {
         return segundoApellido;
     }
 
-    public void setSegundoApellido(String segundoApellido) {
-        validarSegundoApellido(segundoApellido);
-        this.segundoApellido = segundoApellido;
+    public void setSegundoApellido(String nuevoSegundoApellido) {
+        validarSegundoApellido(nuevoSegundoApellido);
+        this.segundoApellido = nuevoSegundoApellido;
     }
 
     public String getDireccion() {
         return direccion;
     }
 
-    public void setDireccion(String direccion) {
+    public void setDireccion(String nuevaDireccion) {
         validarTextoObligatorio(
-                direccion, "La direccion", LONGITUD_MAXIMA_DIRECCION);
-        this.direccion = direccion;
+                nuevaDireccion, "La direccion", LONGITUD_MAXIMA_DIRECCION);
+        this.direccion = nuevaDireccion;
     }
 
     public LocalDate getFechaNacimiento() {
         return fechaNacimiento;
     }
 
-    public void setFechaNacimiento(LocalDate fechaNacimiento) {
-        if (fechaNacimiento == null) {
+    public void setFechaNacimiento(LocalDate nuevaFechaNacimiento) {
+        if (nuevaFechaNacimiento == null) {
             throw new IllegalArgumentException("La fecha de nacimiento no puede ser nula.");
         }
-        this.fechaNacimiento = fechaNacimiento;
+        this.fechaNacimiento = nuevaFechaNacimiento;
     }
 
     @Override
@@ -173,6 +173,3 @@ public class Cliente {
                 curp, nombres, primerApellido, segundoApellido, direccion, fechaNacimiento);
     }
 }
-
-
-
