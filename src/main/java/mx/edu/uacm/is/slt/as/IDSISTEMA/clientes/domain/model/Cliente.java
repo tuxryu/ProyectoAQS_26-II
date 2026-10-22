@@ -7,12 +7,10 @@ import java.util.Objects;
 public class Cliente {
 
     @Id
-    private String nombres;
-    @Id
-    private String primerApellido;
-    @Id
     private String curp;
 
+    private String nombres;
+    private String primerApellido;
     private String segundoApellido;
     private String direccion;
     private LocalDate fechaNacimiento;
@@ -22,11 +20,11 @@ public class Cliente {
     }
 
     // Constructor completo
-    public Cliente(String nombres, String primerApellido, String curp,
+    public Cliente(String curp, String nombres, String primerApellido,
                    String segundoApellido, String direccion, LocalDate fechaNacimiento) {
+        this.curp = curp;
         this.nombres = nombres;
         this.primerApellido = primerApellido;
-        this.curp = curp;
         this.segundoApellido = segundoApellido;
         this.direccion = direccion;
         this.fechaNacimiento = fechaNacimiento;
@@ -35,9 +33,9 @@ public class Cliente {
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof Cliente cliente)) return false;
-        return Objects.equals(nombres, cliente.nombres) &&
+        return Objects.equals(curp, cliente.curp) &&
+                Objects.equals(nombres, cliente.nombres) &&
                 Objects.equals(primerApellido, cliente.primerApellido) &&
-                Objects.equals(curp, cliente.curp) &&
                 Objects.equals(segundoApellido, cliente.segundoApellido) &&
                 Objects.equals(direccion, cliente.direccion) &&
                 Objects.equals(fechaNacimiento, cliente.fechaNacimiento);
@@ -45,10 +43,18 @@ public class Cliente {
 
     @Override
     public int hashCode() {
-        return Objects.hash(nombres, primerApellido, curp, segundoApellido, direccion, fechaNacimiento);
+        return Objects.hash(curp, nombres, primerApellido, segundoApellido, direccion, fechaNacimiento);
     }
 
     // Getters y Setters
+    public String getCurp() {
+        return curp;
+    }
+
+    public void setCurp(String curp) {
+        this.curp = curp;
+    }
+
     public String getNombres() {
         return nombres;
     }
@@ -63,14 +69,6 @@ public class Cliente {
 
     public void setPrimerApellido(String primerApellido) {
         this.primerApellido = primerApellido;
-    }
-
-    public String getCurp() {
-        return curp;
-    }
-
-    public void setCurp(String curp) {
-        this.curp = curp;
     }
 
     public String getSegundoApellido() {
