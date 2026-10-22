@@ -1,22 +1,22 @@
-package mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.adapter.domain.model;
+package mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model;
 
 import java.util.Objects;
 import java.util.UUID;
 
+import jakarta.persistence.Id;
 
 public class Poliza {
 
+    @Id
+    private UUID clave; // Identificador único de la póliza (Integer)
+    private byte tipo;
+    private float monto; // Cobertura financiera
+    private String descripcion; // Detalle de la cobertura
+    private String curpCliente; // FK lógica al Cliente
 
-//
-        private UUID clave; // Identificador único de la póliza (Integer)
-        private byte tipo;
-        private float monto; // Cobertura financiera
-        private String descripcion; // Detalle de la cobertura
-        private String curpCliente; // FK lógica al Cliente
-
-        // Constructor
-        public Poliza() {
-        }
+    // Constructor
+    public Poliza() {
+    }
 
     public Poliza(UUID clave, byte tipo, float monto, String descripcion, String curpCliente) {
         this.clave = clave;
@@ -28,7 +28,9 @@ public class Poliza {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Poliza poliza)) return false;
+        if (!(o instanceof Poliza poliza)) {
+            return false;
+        }
         return tipo == poliza.tipo && Float.compare(monto, poliza.monto) == 0 && Objects.equals(clave, poliza.clave) && Objects.equals(descripcion, poliza.descripcion) && Objects.equals(curpCliente, poliza.curpCliente);
     }
 
