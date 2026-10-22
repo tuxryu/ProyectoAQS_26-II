@@ -2,8 +2,10 @@ package mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model;
 
 import java.util.Objects;
 import java.util.UUID;
+import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 
+@Entity
 public class Poliza {
 
     @Id
