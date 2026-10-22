@@ -45,48 +45,48 @@ public class ClienteRemotoDto {
         return curp;
     }
 
-    public void setCurp(String curp) {
-        this.curp = curp;
+    public void setCurp(String valorCurp) {
+        this.curp = valorCurp;
     }
 
     public String getNombres() {
         return nombres;
     }
 
-    public void setNombres(String nombres) {
-        this.nombres = nombres;
+    public void setNombres(String valorNombres) {
+        this.nombres = valorNombres;
     }
 
     public String getPrimerApellido() {
         return primerApellido;
     }
 
-    public void setPrimerApellido(String primerApellido) {
-        this.primerApellido = primerApellido;
+    public void setPrimerApellido(String valorPrimerApellido) {
+        this.primerApellido = valorPrimerApellido;
     }
 
     public String getSegundoApellido() {
         return normalizarSegundoApellido(segundoApellido);
     }
 
-    public void setSegundoApellido(String segundoApellido) {
-        this.segundoApellido = normalizarSegundoApellido(segundoApellido);
+    public void setSegundoApellido(String valorSegundoApellido) {
+        this.segundoApellido = normalizarSegundoApellido(valorSegundoApellido);
     }
 
     public String getDireccion() {
         return direccion;
     }
 
-    public void setDireccion(String direccion) {
-        this.direccion = direccion;
+    public void setDireccion(String valorDireccion) {
+        this.direccion = valorDireccion;
     }
 
     public String getFechaNacimiento() {
         return fechaNacimiento;
     }
 
-    public void setFechaNacimiento(String fechaNacimiento) {
-        this.fechaNacimiento = fechaNacimiento;
+    public void setFechaNacimiento(String valorFechaNacimiento) {
+        this.fechaNacimiento = valorFechaNacimiento;
     }
 
     /**
@@ -95,6 +95,6 @@ public class ClienteRemotoDto {
      * @return fecha de nacimiento como LocalDate
      */
     public LocalDate obtenerFechaNacimientoLocal() {
-        return FechasSistemaDueno.aLocalDate(fechaNacimiento);
+        return FechasSistemaDueno.convertirALocalDate(fechaNacimiento);
     }
 }

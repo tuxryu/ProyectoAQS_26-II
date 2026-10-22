@@ -57,8 +57,7 @@ class ClienteSistemaDuenoAdapterTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
 
-        Optional<ClienteRemotoDto> resultado =
-                adapter.buscarPorCurp("broe550101hdfabc00");
+        Optional<ClienteRemotoDto> resultado = adapter.buscarPorCurp("broe550101hdfabc00");
 
         assertTrue(resultado.isPresent());
         ClienteRemotoDto dto = resultado.get();
@@ -74,10 +73,10 @@ class ClienteSistemaDuenoAdapterTest {
     void debeParsearFechaUtcMenosSeisEnHorarioEstandarYVerano() {
         assertEquals(
                 LocalDate.of(1990, 1, 1),
-                FechasSistemaDueno.aLocalDate("1990-01-01T06:00:00.000+00:00"));
+                FechasSistemaDueno.convertirALocalDate("1990-01-01T06:00:00.000+00:00"));
         assertEquals(
                 LocalDate.of(2003, 7, 15),
-                FechasSistemaDueno.aLocalDate("2003-07-15T05:00:00.000+00:00"));
+                FechasSistemaDueno.convertirALocalDate("2003-07-15T05:00:00.000+00:00"));
         assertEquals(
                 "1990-01-01",
                 FechasSistemaDueno.formatearParaRuta(LocalDate.of(1990, 1, 1)));
@@ -89,8 +88,7 @@ class ClienteSistemaDuenoAdapterTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
 
-        Optional<ClienteRemotoDto> resultado =
-                adapter.buscarPorCurp("BROE550101HDFABC00");
+        Optional<ClienteRemotoDto> resultado = adapter.buscarPorCurp("BROE550101HDFABC00");
 
         assertTrue(resultado.isEmpty());
         mockServer.verify();

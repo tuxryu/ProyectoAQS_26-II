@@ -48,7 +48,7 @@ public class ClienteSistemaDuenoAdapter {
                     || respuesta.getCurp().trim().isEmpty()) {
                 return Optional.empty();
             }
-            FechasSistemaDueno.aLocalDate(respuesta.getFechaNacimiento());
+            FechasSistemaDueno.convertirALocalDate(respuesta.getFechaNacimiento());
             return Optional.of(respuesta);
         } catch (ResourceAccessException ex) {
             throw new SistemaDuenoNoDisponibleException(

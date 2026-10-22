@@ -15,8 +15,7 @@ public final class FechasSistemaDueno {
 
     public static final ZoneId ZONA_CDMX = ZoneId.of("America/Mexico_City");
 
-    private static final DateTimeFormatter FORMATO_FECHA_RUTA =
-            DateTimeFormatter.ISO_LOCAL_DATE;
+    private static final DateTimeFormatter FORMATO_FECHA_RUTA = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private FechasSistemaDueno() {
     }
@@ -29,7 +28,7 @@ public final class FechasSistemaDueno {
      * @param valor cadena de texto con la fecha o timestamp del servidor remoto
      * @return fecha local correspondiente en Ciudad de Mexico
      */
-    public static LocalDate aLocalDate(String valor) {
+    public static LocalDate convertirALocalDate(String valor) {
         if (valor == null || valor.trim().isEmpty()) {
             throw new IllegalArgumentException(
                     "El valor de fecha del Sistema Dueno no puede ser nulo ni vacio.");
