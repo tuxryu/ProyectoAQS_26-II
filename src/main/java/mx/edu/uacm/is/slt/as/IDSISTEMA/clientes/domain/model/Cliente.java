@@ -1,9 +1,11 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model;
 
+import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import java.time.LocalDate;
 import java.util.Objects;
 
+@Entity
 public class Cliente {
 
     @Id
@@ -15,7 +17,7 @@ public class Cliente {
     private String direccion;
     private LocalDate fechaNacimiento;
 
-    // Constructor vacío
+    // Constructor vacío (Requerido por JPA/Frameworks)
     public Cliente() {
     }
 
@@ -32,6 +34,7 @@ public class Cliente {
 
     @Override
     public boolean equals(Object o) {
+        if (this == o) return true;
         if (!(o instanceof Cliente cliente)) return false;
         return Objects.equals(curp, cliente.curp) &&
                 Objects.equals(nombres, cliente.nombres) &&
