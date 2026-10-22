@@ -1,0 +1,90 @@
+@startuml
+title Arquitectura Limpia - Monolito Modular
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam defaultFontSize 12
+
+rectangle "Capa 4: Frameworks y Drivers - Java 25 / Spring Boot 4.1.1 (Puerto :8080)" as C4a #E8EAE8 {
+  component "<<Interfaz de Usuario>>\nIU Web Thymeleaf (paquete ui/web) / Cliente REST\n--\n• HomeViewController y ViewControllers (req. 14 a 19)\n• Notificación de resultados y errores (req. 17)\n" as UI #ADD8E6
+}
+
+rectangle "Capa 3: Adaptadores de Entrada (Web / REST en :8080)" as C3in #EAF4FB {
+  component "<<Adaptador REST>>\nClienteController\n--\n• POST /clientes, PUT /clientes/{curp}\n• GET /clientes/{curp}\n• Mapea DTO ↔ entidad" as ACli #90EE90
+  component "<<Adaptador REST>>\nPolizaController\n--\n• GET /polizas (6 filtros + paginación)\n• POST, PATCH, DELETE ?confirmar=true\n• Mapea DTO ↔ entidad" as APol #90EE90
+  component "<<Adaptador REST>>\nBeneficiarioController\n--\n• POST /polizas/{clave}/beneficiarios\n• GET /polizas/{clave}/beneficiarios?...\n• Mapea DTO ↔ entidad" as ABen #90EE90
+}
+
+rectangle "Capa 2: Casos de Uso (Monolito Modular: 1 módulo = 1 contexto delimitado)" as C2 #F0E9F8 {
+
+  package "Módulo Clientes" as MSC {
+    interface "Alta / Modificar / Consultar\nClienteUseCase (entrada)" as PInCli
+    component "<<Caso de uso>>\nClienteService\n--\n• Alta: CURP mayúsculas, 409 si existe\n• Modificación: PUT o POST según 2º apellido\n• Relee y compara tras escribir" as SCli #9370DB
+    interface "ClienteRemotoPort\n(salida)" as POutCli
+  }
+
+  package "Módulo Pólizas" as MSP {
+    interface "Alta / Consulta / Gestionar\nPolizaUseCase (entrada)" as PInPol
+    component "<<Caso de uso>>\nPolizaService -> coordinador\n--\n• Alta (UUID propio) / Modif. / Baja\n• exigirRegistrado(curp) antes de escribir\n• Consulta con 6 filtros, paginación en memoria" as SPol #9370DB
+    interface "PolizaRemotaPort\n(salida)" as POutPol
+    interface "ClienteServicioPort\n(salida inter-módulo)" as POutPolCli
+  }
+
+  package "Módulo Beneficiarios" as MSB {
+    interface "Alta / Consulta\nBeneficiarioUseCase (entrada)" as PInBen
+    component "<<Caso de uso>>\nBeneficiarioService\n--\n• Alta: exige póliza (404), duplicado (409)\n• Consulta por póliza + datos completos\n•Debe sumar 100%" as SBen #9370DB
+    interface "BeneficiarioRemotoPort\n(salida)" as POutBen
+    interface "PolizaServicioPort\n(salida inter-módulo)" as POutBenPol
+  }
+}
+
+rectangle "Capa 1: Entidades de Dominio / Modelos Hibernate JPA" as C1 #FAFAFA {
+  component "<<Entidad Hibernate>>\nCliente (@Entity)\n--\n• @Id curp: String(18)\n• nombres: String(128)\n• primerApellido: String(128)\n• segundoApellido: String(128) [opcional]\n• direccion: String(512)\n• fechaNacimiento: LocalDate" as ECli #White
+  component "<<Entidad Hibernate>>\nPoliza (@Entity)\n--\n• @Id clave: UUID\n• tipo: TipoPoliza (0=Auto,1=Vida,2=Médico)\n• monto: BigDecimal(9,2)\n• descripcion: String (sin / ni \\)\n• curpCliente: String(18) [referencia]" as EPol #White
+  component "<<Entidad Hibernate>>\nBeneficiario (@Entity)\n--\n• @EmbeddedId id: BeneficiarioId\n  (nombres, primerApellido, segundoApellido,\n   fechaNacimiento, clavePoliza)\n• porcentaje: int (1..100)" as EBen #White
+}
+
+rectangle "Capa 3: Adaptadores de Salida (REST hacia Sistema Dueño e Inter-módulo)" as C3out #FFF8E5 {
+  component "<<Cliente REST>>\nAdaptadores Sistema Dueño (uno por módulo)\nClienteSistemaDuenoAdapter / PolizaSistemaDuenoAdapter /\nBeneficiarioSistemaDuenoAdapter\n--\n• Mapeo con modelos Hibernate/DTO (JSON camelCase; fechas CDMX)\n• Atributos como segmentos de ruta codificados (prohíbe / y \\)\n• 200 vacío → no existe (lectura) o rechazo (escritura); [] → sin resultados\n• 500 → rechazo de datos (502); 502/503/504/red/timeout → no disponible (503)\n• Filas inválidas se omiten y se registran en log" as AOut #FFA500
+  component "<<Adaptador Entre-módulo>>\nComunicación interna en memoria\n--\n• ClienteModuloAdapter: invoca ConsultarClienteUseCase\n• PolizaModuloAdapter: invoca ConsultaPolizaUseCase" as AInt #FFA500
+}
+
+cloud "Capa 4: Infraestructura Remota y única fuente de datos" as C4b #FDECEC {
+  component "<<Sistema Externo>>\nSistema Dueño de Pólizas\nhttp://nachintoch.mx:8080\n--\n• 15 endpoints: 9 GET, 3 POST, 2 PUT, 1 DELETE\n• Respuesta JSON\n• POST = upsert; casi no valida; DELETE en cascada\n• Sin endpoints para listar clientes ni editar/borrar beneficiarios\n  Posiblemente se tenga que hacer de forma compuesta" as EXT #FFC0CB
+}
+
+UI --> ACli : HTTP
+UI --> APol : HTTP
+UI --> ABen : HTTP
+
+ACli --> PInCli : invoca
+APol --> PInPol : invoca
+ABen --> PInBen : invoca
+
+' El servicio IMPLEMENTA el puerto de entrada
+SCli .up.|> PInCli
+SPol .up.|> PInPol
+SBen .up.|> PInBen
+
+' El servicio USA los puertos de salida
+SCli --> POutCli : usa
+SPol --> POutPol : usa
+SPol --> POutPolCli : usa
+SBen --> POutBen : usa
+SBen --> POutBenPol : usa
+
+SCli ..> ECli : usa y valida
+SPol ..> EPol : usa y valida
+SBen ..> EBen : usa y valida
+
+' Inversión de dependencias: el ADAPTADOR implementa el puerto
+AOut .up.|> POutCli : implementa
+AOut .up.|> POutPol : implementa
+AOut .up.|> POutBen : implementa
+AInt .up.|> POutPolCli : implementa
+AInt .up.|> POutBenPol : implementa
+
+AOut --> EXT : HTTP/REST\n(GET, POST, PUT, DELETE)
+AInt --> PInCli : invoca en memoria
+AInt --> PInPol : invoca en memoria
+
+@enduml
