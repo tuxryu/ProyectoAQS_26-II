@@ -2,7 +2,6 @@ package mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model;
 
 import java.util.Objects;
 import java.util.UUID;
-
 import jakarta.persistence.Id;
 
 public class Poliza {
@@ -31,7 +30,11 @@ public class Poliza {
         if (!(o instanceof Poliza poliza)) {
             return false;
         }
-        return tipo == poliza.tipo && Float.compare(monto, poliza.monto) == 0 && Objects.equals(clave, poliza.clave) && Objects.equals(descripcion, poliza.descripcion) && Objects.equals(curpCliente, poliza.curpCliente);
+        return tipo == poliza.tipo
+                && Float.compare(monto, poliza.monto) == 0
+                && Objects.equals(clave, poliza.clave)
+                && Objects.equals(descripcion, poliza.descripcion)
+                && Objects.equals(curpCliente, poliza.curpCliente);
     }
 
     @Override
