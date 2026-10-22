@@ -31,3 +31,27 @@ build/
 
 ### VS Code ###
 .vscode/
+# Archivos específicos de Linux
+*~
+*.swp
+*.swo
+.directory
+.Trash-*
+.netrwhist
+
+# Entornos virtuales y dependencias (Node.js, Python, etc.)
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Logs y archivos temporales
+*.log
+tmp/
+temp/
+
+# Configuraciones locales que no deben compartirse
+.env
+.env.local
+config.local.json
