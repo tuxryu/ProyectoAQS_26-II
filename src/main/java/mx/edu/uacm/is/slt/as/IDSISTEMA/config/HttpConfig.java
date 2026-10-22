@@ -19,6 +19,7 @@ public class HttpConfig {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeoutConexion);
         requestFactory.setReadTimeout(timeoutLectura);
+
         return RestClient.builder()
                 .baseUrl(urlBase)
                 .requestFactory(requestFactory)
