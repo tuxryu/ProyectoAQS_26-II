@@ -3,10 +3,11 @@ package mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.adapter.domain.model;
 import java.util.Objects;
 import java.util.UUID;
 
+
 public class Poliza {
 
 
-        @Id
+
         private UUID clave; // Identificador único de la póliza (Integer)
         private byte tipo;
         private float monto; // Cobertura financiera
