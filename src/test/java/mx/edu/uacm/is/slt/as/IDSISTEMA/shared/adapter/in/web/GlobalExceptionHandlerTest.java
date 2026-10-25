@@ -1,19 +1,18 @@
+
 package mx.edu.uacm.is.slt.as.IDSISTEMA.shared.adapter.in.web;
 
+import java.util.NoSuchElementException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import jakarta.servlet.http.HttpServletRequest;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.ConflictoDatosException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-
-import java.util.NoSuchElementException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -32,63 +31,88 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void debeMapearErrores400() {
-        assertEquals(HttpStatus.BAD_REQUEST,
+        assertEquals(
+                HttpStatus.BAD_REQUEST,
                 handler.manejarSolicitudIncorrecta(
-                        new IllegalArgumentException(), request).getStatusCode());
+                        new IllegalArgumentException(), request
+                ).getStatusCode()
+        );
 
-        assertEquals(HttpStatus.BAD_REQUEST,
+        assertEquals(
+                HttpStatus.BAD_REQUEST,
                 handler.manejarSolicitudIncorrecta(
                         new HttpMessageNotReadableException(
-                                        "JSON inválido", null, null), request)
-                        .getStatusCode());
+                                "JSON inválido", null, null
+                        ), request
+                ).getStatusCode()
+        );
 
-        assertEquals(HttpStatus.BAD_REQUEST,
+        assertEquals(
+                HttpStatus.BAD_REQUEST,
                 handler.manejarSolicitudIncorrecta(
-                                new MissingServletRequestParameterException("id", "String"), request)
-                        .getStatusCode());
+                        new MissingServletRequestParameterException(
+                                "id", "String"
+                        ), request
+                ).getStatusCode()
+        );
 
-        assertEquals(HttpStatus.BAD_REQUEST,
+        assertEquals(
+                HttpStatus.BAD_REQUEST,
                 handler.manejarSolicitudIncorrecta(
-                                mock(MethodArgumentTypeMismatchException.class), request)
-                        .getStatusCode());
+                        mock(MethodArgumentTypeMismatchException.class), request
+                ).getStatusCode()
+        );
     }
 
     @Test
     void debeMapearError404() {
-        assertEquals(HttpStatus.NOT_FOUND,
+        assertEquals(
+                HttpStatus.NOT_FOUND,
                 handler.manejarNoEncontrado(
-                        new NoSuchElementException(), request).getStatusCode());
+                        new NoSuchElementException(), request
+                ).getStatusCode()
+        );
     }
 
     @Test
     void debeMapearError409() {
-        assertEquals(HttpStatus.CONFLICT,
+        assertEquals(
+                HttpStatus.CONFLICT,
                 handler.manejarConflicto(
-                        new ConflictoDatosException("Conflicto"), request).getStatusCode());
+                        new ConflictoDatosException("Conflicto"), request
+                ).getStatusCode()
+        );
     }
 
     @Test
     void debeMapearError422() {
-        MethodArgumentNotValidException ex =
-                mock(MethodArgumentNotValidException.class);
+        MethodArgumentNotValidException ex
+                = mock(MethodArgumentNotValidException.class);
 
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY,
-                handler.manejarDatosNoProcesables(ex, request).getStatusCode());
+        assertEquals(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                handler.manejarDatosNoProcesables(ex, request).getStatusCode()
+        );
     }
 
     @Test
     void debeMapearError502() {
-        assertEquals(HttpStatus.BAD_GATEWAY,
+        assertEquals(
+                HttpStatus.BAD_GATEWAY,
                 handler.manejarRechazoSistemaDueno(
-                                new SistemaDuenoRechazoException("Rechazo"), request)
-                        .getStatusCode());
+                        new SistemaDuenoRechazoException("Rechazo"), request
+                ).getStatusCode()
+        );
     }
 
     @Test
     void debeMapearError503() {
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE,
+        assertEquals(
+                HttpStatus.SERVICE_UNAVAILABLE,
                 handler.manejarSistemaDuenoNoDisponible(
-                                new SistemaDuenoNoDisponibleException("No disponible"), request)
-                        .getStatusCode());
+                        new SistemaDuenoNoDisponibleException("No disponible"),
+                        request
+                ).getStatusCode()
+        );
     }
 }
