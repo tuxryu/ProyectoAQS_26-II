@@ -16,12 +16,16 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.adapter.out.rest.dto.PolizaRemotaDto;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.out.PolizaRemotaPort;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 
 /**
  * Adaptador de salida REST hacia el Sistema Dueno para las consultas GET de
- * polizas (lectura por clave y listados con filtro).
+ * polizas (lectura por clave y listados con filtro). Implementa
+ * {@link PolizaRemotaPort}: cada fila JSON se valida como {@link PolizaRemotaDto}
+ * y despues se convierte a la entidad de dominio {@link Poliza}.
  *
  * <p>Reglas aplicadas (hallazgos del Sistema Dueno):
  * <ul>
@@ -34,7 +38,7 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
  * </ul>
  */
 @Component
-public class PolizaSistemaDuenoAdapter {
+public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
 
     private static final Logger LOG = LoggerFactory.getLogger(PolizaSistemaDuenoAdapter.class);
 
@@ -56,7 +60,8 @@ public class PolizaSistemaDuenoAdapter {
      * @return Optional con la poliza o Optional.empty() si el servidor responde 200 vacio
      * @throws SistemaDuenoRechazoException si la poliza devuelta tiene datos inconsistentes
      */
-    public Optional<PolizaRemotaDto> buscarPorClave(UUID clave) {
+    @Override
+    public Optional<Poliza> buscarPorClave(UUID clave) {
         Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
         Map<?, ?> fila = ejecutar(() -> restClient.get()
                 .uri("/poliza/{clave}", clave)
@@ -66,7 +71,7 @@ public class PolizaSistemaDuenoAdapter {
             return Optional.empty();
         }
         try {
-            return Optional.of(convertirFila(fila));
+            return Optional.of(convertirADominio(convertirFila(fila)));
         } catch (IllegalArgumentException ex) {
             throw new SistemaDuenoRechazoException(
                     "El Sistema Dueno devolvio una poliza inconsistente: " + ex.getMessage(), ex);
@@ -78,7 +83,8 @@ public class PolizaSistemaDuenoAdapter {
      *
      * @return polizas validas; lista vacia si no hay resultados
      */
-    public List<PolizaRemotaDto> listarTodas() {
+    @Override
+    public List<Poliza> listarTodas() {
         return consultarLista("/polizas");
     }
 
@@ -89,7 +95,8 @@ public class PolizaSistemaDuenoAdapter {
      * @param curp CURP del cliente titular
      * @return polizas validas del cliente; lista vacia si no hay resultados
      */
-    public List<PolizaRemotaDto> buscarPorCurp(String curp) {
+    @Override
+    public List<Poliza> buscarPorCurp(String curp) {
         validarSegmentoObligatorio(curp, "La CURP");
         return consultarLista("/polizas/{curp}", curp);
     }
@@ -100,7 +107,8 @@ public class PolizaSistemaDuenoAdapter {
      * @param tipo tipo de poliza (0 = Auto, 1 = Vida, 2 = Medico)
      * @return polizas validas del tipo indicado; lista vacia si no hay resultados
      */
-    public List<PolizaRemotaDto> buscarPorTipo(int tipo) {
+    @Override
+    public List<Poliza> buscarPorTipo(int tipo) {
         if (tipo < TIPO_MINIMO || tipo > TIPO_MAXIMO) {
             throw new IllegalArgumentException(
                     "El tipo de poliza debe estar entre 0 y 2, se recibio " + tipo + ".");
@@ -117,7 +125,8 @@ public class PolizaSistemaDuenoAdapter {
      * @param segundoApellido segundo apellido del cliente (opcional, puede ser null)
      * @return polizas validas; lista vacia si no hay resultados
      */
-    public List<PolizaRemotaDto> buscarPorCliente(
+    @Override
+    public List<Poliza> buscarPorCliente(
             String nombres, String primerApellido, String segundoApellido) {
         return buscarPorPersona("c", nombres, primerApellido, segundoApellido);
     }
@@ -131,12 +140,13 @@ public class PolizaSistemaDuenoAdapter {
      * @param segundoApellido segundo apellido del beneficiario (opcional, puede ser null)
      * @return polizas validas; lista vacia si no hay resultados
      */
-    public List<PolizaRemotaDto> buscarPorBeneficiario(
+    @Override
+    public List<Poliza> buscarPorBeneficiario(
             String nombres, String primerApellido, String segundoApellido) {
         return buscarPorPersona("b", nombres, primerApellido, segundoApellido);
     }
 
-    private List<PolizaRemotaDto> buscarPorPersona(
+    private List<Poliza> buscarPorPersona(
             String prefijo, String nombres, String primerApellido, String segundoApellido) {
         validarSegmentoObligatorio(nombres, "El nombre");
         validarSegmentoObligatorio(primerApellido, "El primer apellido");
@@ -149,7 +159,7 @@ public class PolizaSistemaDuenoAdapter {
                 ruta + "/{segundoApellido}", nombres, primerApellido, segundoApellido);
     }
 
-    private List<PolizaRemotaDto> consultarLista(String plantilla, Object... variables) {
+    private List<Poliza> consultarLista(String plantilla, Object... variables) {
         List<?> filas = ejecutar(() -> restClient.get()
                 .uri(plantilla, variables)
                 .retrieve()
@@ -157,16 +167,25 @@ public class PolizaSistemaDuenoAdapter {
         if (filas == null) {
             return List.of();
         }
-        List<PolizaRemotaDto> polizas = new ArrayList<>(filas.size());
+        List<Poliza> polizas = new ArrayList<>(filas.size());
         for (Object elemento : filas) {
             try {
-                polizas.add(convertirFila(elemento));
+                polizas.add(convertirADominio(convertirFila(elemento)));
             } catch (IllegalArgumentException ex) {
                 LOG.warn("Se omite una poliza invalida del Sistema Dueno ({}): {}",
                         ex.getMessage(), elemento);
             }
         }
         return List.copyOf(polizas);
+    }
+
+    private Poliza convertirADominio(PolizaRemotaDto dto) {
+        return new Poliza(
+                dto.clave(),
+                (byte) dto.tipo(),
+                dto.monto().floatValue(),
+                dto.descripcion(),
+                dto.curpCliente());
     }
 
     private <T> T ejecutar(Supplier<T> peticion) {

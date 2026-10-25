@@ -1,7 +1,7 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.adapter.out.rest;
 
-import java.math.BigDecimal;
 import java.net.SocketTimeoutException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,9 +12,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.adapter.out.rest.dto.PolizaRemotaDto;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.FechasSistemaDueno;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -76,16 +77,16 @@ class PolizaSistemaDuenoAdapterTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(POLIZA_MEDICO, MediaType.APPLICATION_JSON));
 
-        Optional<PolizaRemotaDto> resultado = adapter.buscarPorClave(
+        Optional<Poliza> resultado = adapter.buscarPorClave(
                 UUID.fromString(CLAVE_MEDICO));
 
         assertTrue(resultado.isPresent());
-        PolizaRemotaDto poliza = resultado.get();
-        assertEquals(UUID.fromString(CLAVE_MEDICO), poliza.clave());
-        assertEquals(2, poliza.tipo());
-        assertEquals(0, new BigDecimal("1500000").compareTo(poliza.monto()));
-        assertEquals("Cobertura por accidentes industriales", poliza.descripcion());
-        assertEquals("broe550101hdfabc00", poliza.curpCliente());
+        Poliza poliza = resultado.get();
+        assertEquals(UUID.fromString(CLAVE_MEDICO), poliza.getClave());
+        assertEquals((byte) 2, poliza.getTipo());
+        assertEquals(1500000.0f, poliza.getMonto());
+        assertEquals("Cobertura por accidentes industriales", poliza.getDescripcion());
+        assertEquals("broe550101hdfabc00", poliza.getCurpCliente());
         mockServer.verify();
     }
 
@@ -128,11 +129,11 @@ class PolizaSistemaDuenoAdapterTest {
                         "[" + POLIZA_MEDICO + "," + POLIZA_AUTO + "]",
                         MediaType.APPLICATION_JSON));
 
-        List<PolizaRemotaDto> polizas = adapter.listarTodas();
+        List<Poliza> polizas = adapter.listarTodas();
 
         assertEquals(2, polizas.size());
-        assertEquals(UUID.fromString(CLAVE_MEDICO), polizas.get(0).clave());
-        assertEquals(UUID.fromString(CLAVE_AUTO), polizas.get(1).clave());
+        assertEquals(UUID.fromString(CLAVE_MEDICO), polizas.get(0).getClave());
+        assertEquals(UUID.fromString(CLAVE_AUTO), polizas.get(1).getClave());
         mockServer.verify();
     }
 
@@ -161,11 +162,11 @@ class PolizaSistemaDuenoAdapterTest {
         mockServer.expect(requestTo(URL_BASE + "/polizas"))
                 .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
 
-        List<PolizaRemotaDto> polizas = adapter.listarTodas();
+        List<Poliza> polizas = adapter.listarTodas();
 
         assertEquals(2, polizas.size());
-        assertEquals(UUID.fromString(CLAVE_MEDICO), polizas.get(0).clave());
-        assertEquals(UUID.fromString(CLAVE_AUTO), polizas.get(1).clave());
+        assertEquals(UUID.fromString(CLAVE_MEDICO), polizas.get(0).getClave());
+        assertEquals(UUID.fromString(CLAVE_AUTO), polizas.get(1).getClave());
         mockServer.verify();
     }
 
@@ -176,10 +177,10 @@ class PolizaSistemaDuenoAdapterTest {
         mockServer.expect(requestTo(URL_BASE + "/polizas"))
                 .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
 
-        List<PolizaRemotaDto> polizas = adapter.listarTodas();
+        List<Poliza> polizas = adapter.listarTodas();
 
         assertEquals(1, polizas.size());
-        assertNull(polizas.get(0).descripcion());
+        assertNull(polizas.get(0).getDescripcion());
         mockServer.verify();
     }
 
@@ -191,7 +192,7 @@ class PolizaSistemaDuenoAdapterTest {
                         "[" + POLIZA_MEDICO + "," + POLIZA_AUTO + "]",
                         MediaType.APPLICATION_JSON));
 
-        List<PolizaRemotaDto> polizas = adapter.buscarPorCurp("broe550101hdfabc00");
+        List<Poliza> polizas = adapter.buscarPorCurp("broe550101hdfabc00");
 
         assertEquals(2, polizas.size());
         mockServer.verify();
@@ -212,10 +213,10 @@ class PolizaSistemaDuenoAdapterTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("[" + POLIZA_MEDICO + "]", MediaType.APPLICATION_JSON));
 
-        List<PolizaRemotaDto> polizas = adapter.buscarPorTipo(2);
+        List<Poliza> polizas = adapter.buscarPorTipo(2);
 
         assertEquals(1, polizas.size());
-        assertEquals(2, polizas.get(0).tipo());
+        assertEquals((byte) 2, polizas.get(0).getTipo());
         mockServer.verify();
     }
 
@@ -232,11 +233,18 @@ class PolizaSistemaDuenoAdapterTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("[" + POLIZA_AUTO + "]", MediaType.APPLICATION_JSON));
 
-        List<PolizaRemotaDto> polizas = adapter.buscarPorCliente(
+        List<Poliza> polizas = adapter.buscarPorCliente(
                 "Emmett Lathrop", "Brown", "Lopez");
 
         assertEquals(1, polizas.size());
         mockServer.verify();
+    }
+
+    @Test
+    void debeConvertirTimestampUtcMenosSeisALocalDateConFechasSistemaDueno() {
+        assertEquals(
+                LocalDate.of(1990, 1, 1),
+                FechasSistemaDueno.convertirALocalDate("1990-01-01T06:00:00.000+00:00"));
     }
 
     @Test
