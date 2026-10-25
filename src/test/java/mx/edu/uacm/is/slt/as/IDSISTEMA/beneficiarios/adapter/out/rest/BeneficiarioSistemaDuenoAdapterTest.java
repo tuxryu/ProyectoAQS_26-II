@@ -4,7 +4,6 @@ package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.out.rest;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -12,11 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
-
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -28,8 +25,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class BeneficiarioSistemaDuenoAdapterTest {
 
     private static final String URL_BASE = "http://nachintoch.mx:8080";
-    private static final String CLAVE =
-            "1c79ca05-4cc1-46ab-8f67-7d18d6959ac3";
+    private static final String CLAVE
+            = "1c79ca05-4cc1-46ab-8f67-7d18d6959ac3";
 
     private MockRestServiceServer mockServer;
     private BeneficiarioSistemaDuenoAdapter adapter;

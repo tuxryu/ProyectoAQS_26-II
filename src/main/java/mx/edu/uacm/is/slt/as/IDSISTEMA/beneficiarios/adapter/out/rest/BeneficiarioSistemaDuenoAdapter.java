@@ -4,12 +4,10 @@ import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
-
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.out.rest.dto.BeneficiarioIdRemotoDto;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.out.rest.dto.BeneficiarioRemotoDto;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.out.BeneficiarioSistemaDuenoPort;
@@ -44,8 +42,8 @@ public class BeneficiarioSistemaDuenoAdapter
         validarSegmento(nombres);
         validarSegmento(primerApellido);
 
-        boolean tieneSegundoApellido =
-                segundoApellido != null && !segundoApellido.trim().isEmpty();
+        boolean tieneSegundoApellido
+                = segundoApellido != null && !segundoApellido.trim().isEmpty();
 
         if (tieneSegundoApellido) {
             validarSegmento(segundoApellido);
@@ -57,7 +55,8 @@ public class BeneficiarioSistemaDuenoAdapter
             if (tieneSegundoApellido) {
                 respuesta = restClient.get()
                         .uri(
-                                "/beneficiario/{fecha}/{clavePoliza}/{nombres}/{primerApellido}/{segundoApellido}",
+                                "/beneficiario/{fecha}/{clavePoliza}/{nombres}/{primerApellido}"
+                                        + "/{segundoApellido}",
                                 FechasSistemaDueno.formatearParaRuta(fechaNacimiento),
                                 clavePoliza,
                                 nombres,
