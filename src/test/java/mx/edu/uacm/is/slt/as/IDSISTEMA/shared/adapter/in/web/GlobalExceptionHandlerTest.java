@@ -14,6 +14,7 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.Conflicto
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -114,5 +115,46 @@ class GlobalExceptionHandlerTest {
                         request
                 ).getStatusCode()
         );
+    }
+
+    @Test
+    void debeConstruirRespuestaDeErrorConTodosLosCampos() {
+        var respuesta = handler.manejarNoEncontrado(
+                new NoSuchElementException(),
+                request
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, respuesta.getStatusCode());
+        assertNotNull(respuesta.getBody());
+
+        var error = respuesta.getBody();
+
+        assertNotNull(error.timestamp());
+        assertEquals(404, error.status());
+        assertEquals("Not Found", error.error());
+        assertEquals("No se encontró el recurso solicitado.", error.message());
+        assertEquals("/prueba", error.path());
+    }
+
+    @Test
+    void debeMantenerLaEstructuraDeRespuestaEnError422() {
+        MethodArgumentNotValidException ex =
+                mock(MethodArgumentNotValidException.class);
+
+        var respuesta = handler.manejarDatosNoProcesables(ex, request);
+
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, respuesta.getStatusCode());
+        assertNotNull(respuesta.getBody());
+
+        var error = respuesta.getBody();
+
+        assertNotNull(error.timestamp());
+        assertEquals(422, error.status());
+        assertEquals("Unprocessable Entity", error.error());
+        assertEquals(
+                "Los datos enviados no cumplen las reglas de validación.",
+                error.message()
+        );
+        assertEquals("/prueba", error.path());
     }
 }
