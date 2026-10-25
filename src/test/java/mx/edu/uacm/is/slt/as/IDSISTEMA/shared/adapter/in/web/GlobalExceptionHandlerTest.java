@@ -138,8 +138,8 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void debeMantenerLaEstructuraDeRespuestaEnError422() {
-        MethodArgumentNotValidException ex =
-                mock(MethodArgumentNotValidException.class);
+        MethodArgumentNotValidException ex
+                = mock(MethodArgumentNotValidException.class);
 
         var respuesta = handler.manejarDatosNoProcesables(ex, request);
 
