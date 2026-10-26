@@ -3,15 +3,12 @@ package mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.adapter.out.rest;
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.adapter.out.rest.dto.ClienteRemotoDto;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.FechasSistemaDueno;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.TraductorExcepcionesSistemaDueno;
 
 /**
  * Adaptador de salida REST hacia el Sistema Dueno para operaciones de clientes
@@ -44,24 +41,17 @@ public class ClienteSistemaDuenoAdapter {
      */
     public Optional<ClienteRemotoDto> buscarPorCurp(String curp) {
         validarSegmentoObligatorio(curp, "La CURP");
-        try {
-            ClienteRemotoDto respuesta = restClient.get()
-                    .uri("/cliente/{curp}", curp)
-                    .retrieve()
-                    .body(ClienteRemotoDto.class);
+        ClienteRemotoDto respuesta = TraductorExcepcionesSistemaDueno.ejecutar(
+                () -> restClient.get()
+                        .uri("/cliente/{curp}", curp)
+                        .retrieve()
+                        .body(ClienteRemotoDto.class));
 
-            if (esRespuestaVacia(respuesta)) {
-                return Optional.empty();
-            }
-            FechasSistemaDueno.convertirALocalDate(respuesta.getFechaNacimiento());
-            return Optional.of(respuesta);
-        } catch (ResourceAccessException ex) {
-            throw new SistemaDuenoNoDisponibleException(
-                    "El Sistema Dueno no esta disponible por fallo de conexion o timeout.",
-                    ex);
-        } catch (RestClientResponseException ex) {
-            throw traducirErrorHttp(ex);
+        if (esRespuestaVacia(respuesta)) {
+            return Optional.empty();
         }
+        FechasSistemaDueno.convertirALocalDate(respuesta.getFechaNacimiento());
+        return Optional.of(respuesta);
     }
 
     /**
@@ -104,22 +94,15 @@ public class ClienteSistemaDuenoAdapter {
         LocalDate fechaLocal = cliente.obtenerFechaNacimientoLocal();
         String fechaRuta = FechasSistemaDueno.formatearParaRuta(fechaLocal);
 
-        try {
-            ClienteRemotoDto respuesta = ejecutarPeticionEscritura(
-                    curp, cliente, fechaRuta, segundoApellido, usarPut);
-            if (esRespuestaVacia(respuesta)) {
-                throw new SistemaDuenoRechazoException(
-                        "El Sistema Dueno rechazo la escritura del cliente (200 vacio).");
-            }
-            FechasSistemaDueno.convertirALocalDate(respuesta.getFechaNacimiento());
-            return respuesta;
-        } catch (ResourceAccessException ex) {
-            throw new SistemaDuenoNoDisponibleException(
-                    "El Sistema Dueno no esta disponible por fallo de conexion o timeout.",
-                    ex);
-        } catch (RestClientResponseException ex) {
-            throw traducirErrorHttp(ex);
+        ClienteRemotoDto respuesta = TraductorExcepcionesSistemaDueno.ejecutar(
+                () -> ejecutarPeticionEscritura(
+                        curp, cliente, fechaRuta, segundoApellido, usarPut));
+        if (esRespuestaVacia(respuesta)) {
+            throw new SistemaDuenoRechazoException(
+                    "El Sistema Dueno rechazo la escritura del cliente (200 vacio).");
         }
+        FechasSistemaDueno.convertirALocalDate(respuesta.getFechaNacimiento());
+        return respuesta;
     }
 
     private ClienteRemotoDto ejecutarPeticionEscritura(
@@ -185,20 +168,5 @@ public class ClienteSistemaDuenoAdapter {
             throw new IllegalArgumentException(
                     campo + " no puede contener diagonales.");
         }
-    }
-
-    private RuntimeException traducirErrorHttp(RestClientResponseException ex) {
-        HttpStatusCode status = ex.getStatusCode();
-        int codigo = status.value();
-        if (codigo == 502 || codigo == 503 || codigo == 504) {
-            return new SistemaDuenoNoDisponibleException(
-                    "El Sistema Dueno no esta disponible (HTTP " + codigo + ").", ex);
-        }
-        if (codigo == 500) {
-            return new SistemaDuenoRechazoException(
-                    "El Sistema Dueno rechazo la peticion (HTTP 500).", ex);
-        }
-        return new SistemaDuenoRechazoException(
-                "Error inesperado del Sistema Dueno (HTTP " + codigo + ").", ex);
     }
 }
