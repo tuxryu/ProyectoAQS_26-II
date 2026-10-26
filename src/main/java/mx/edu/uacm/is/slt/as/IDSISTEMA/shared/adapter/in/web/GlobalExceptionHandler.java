@@ -1,121 +1,155 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.shared.adapter.in.web;
 
-import java.util.Map;
+import java.time.Instant;
+import java.util.NoSuchElementException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import jakarta.servlet.http.HttpServletRequest;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.adapter.in.web.dto.ErrorResponse;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.FuncionalidadNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.RecursoNoEncontradoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.ConflictoDatosException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 
 /**
  * Manejador global de excepciones para traducir errores de dominio e
- * infraestructura a los codigos HTTP de la especificacion (400, 404, 422, 501,
- * 502 y 503).
+ * infraestructura a respuestas ErrorResponse con los codigos HTTP de la
+ * especificacion (400, 404, 409, 422, 501, 502 y 503).
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * Traduce solicitudes mal formadas o con mas de un filtro a HTTP 400.
-     *
-     * @param ex excepcion de solicitud invalida
-     * @return respuesta 400 Bad Request
-     */
-    @ExceptionHandler(SolicitudInvalidaException.class)
-    public ResponseEntity<Map<String, Object>> manejarSolicitudInvalida(
-            SolicitudInvalidaException ex) {
-        return construirRespuesta(HttpStatus.BAD_REQUEST, ex.getMessage());
+    private ResponseEntity<ErrorResponse> crearRespuesta(
+            HttpStatus status,
+            String mensaje,
+            HttpServletRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                mensaje,
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(status).body(error);
     }
 
-    /**
-     * Traduce la falta de un parametro requerido o un UUID/fecha ilegible en
-     * ruta o query a HTTP 400.
-     *
-     * @param ex excepcion de parametro ausente o tipo incompatible
-     * @return respuesta 400 Bad Request
-     */
+    // 400 - Solicitud incorrecta
     @ExceptionHandler({
+        SolicitudInvalidaException.class,
+        IllegalArgumentException.class,
+        HttpMessageNotReadableException.class,
         MissingServletRequestParameterException.class,
         MethodArgumentTypeMismatchException.class
     })
-    public ResponseEntity<Map<String, Object>> manejarParametroInvalido(Exception ex) {
-        return construirRespuesta(HttpStatus.BAD_REQUEST, ex.getMessage());
+    public ResponseEntity<ErrorResponse> manejarSolicitudIncorrecta(
+            Exception ex, HttpServletRequest request) {
+        return crearRespuesta(
+                HttpStatus.BAD_REQUEST,
+                "La solicitud contiene datos inválidos.",
+                request
+        );
     }
 
-    /**
-     * Traduce recursos no encontrados a HTTP 404.
-     *
-     * @param ex excepcion de recurso no encontrado
-     * @return respuesta 404 Not Found
-     */
+    // 404 - Recurso no encontrado
+    @ExceptionHandler(NoSuchElementException.class)
+    public ResponseEntity<ErrorResponse> manejarNoEncontrado(
+            NoSuchElementException ex, HttpServletRequest request) {
+        return crearRespuesta(
+                HttpStatus.NOT_FOUND,
+                "No se encontró el recurso solicitado.",
+                request
+        );
+    }
+
+    // 404 - Recurso de dominio no encontrado (p. ej. PolizaNoEncontradaException)
     @ExceptionHandler(RecursoNoEncontradoException.class)
-    public ResponseEntity<Map<String, Object>> manejarNoEncontrado(
-            RecursoNoEncontradoException ex) {
-        return construirRespuesta(HttpStatus.NOT_FOUND, ex.getMessage());
+    public ResponseEntity<ErrorResponse> manejarRecursoNoEncontrado(
+            RecursoNoEncontradoException ex, HttpServletRequest request) {
+        return crearRespuesta(
+                HttpStatus.NOT_FOUND,
+                ex.getMessage() != null
+                        ? ex.getMessage()
+                        : "No se encontró el recurso solicitado.",
+                request
+        );
     }
 
-    /**
-     * Traduce violaciones de reglas de dominio (tipo fuera de 0..2, diagonal en
-     * ruta, etc.) a HTTP 422.
-     *
-     * @param ex excepcion de regla de negocio
-     * @return respuesta 422 Unprocessable Entity
-     */
+    // 409 - Conflicto de datos
+    @ExceptionHandler(ConflictoDatosException.class)
+    public ResponseEntity<ErrorResponse> manejarConflicto(
+            ConflictoDatosException ex, HttpServletRequest request) {
+        return crearRespuesta(
+                HttpStatus.CONFLICT,
+                "La operación entra en conflicto con los datos existentes.",
+                request
+        );
+    }
+
+    // 422 - Datos válidos sintácticamente, pero no procesables
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> manejarDatosNoProcesables(
+            MethodArgumentNotValidException ex, HttpServletRequest request) {
+        return crearRespuesta(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "Los datos enviados no cumplen las reglas de validación.",
+                request
+        );
+    }
+
+    // 422 - Violación de regla de negocio/dominio
     @ExceptionHandler(ReglaNegocioException.class)
-    public ResponseEntity<Map<String, Object>> manejarReglaNegocio(
-            ReglaNegocioException ex) {
-        return construirRespuesta(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+    public ResponseEntity<ErrorResponse> manejarReglaNegocio(
+            ReglaNegocioException ex, HttpServletRequest request) {
+        return crearRespuesta(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                ex.getMessage() != null
+                        ? ex.getMessage()
+                        : "Los datos enviados no cumplen las reglas de validación.",
+                request
+        );
     }
 
-    /**
-     * Traduce funcionalidades pendientes de implementar a HTTP 501.
-     *
-     * @param ex excepcion de funcionalidad no disponible
-     * @return respuesta 501 Not Implemented
-     */
+    // 501 - Funcionalidad pendiente de implementar
     @ExceptionHandler(FuncionalidadNoDisponibleException.class)
-    public ResponseEntity<Map<String, Object>> manejarNoImplementado(
-            FuncionalidadNoDisponibleException ex) {
-        return construirRespuesta(HttpStatus.NOT_IMPLEMENTED, ex.getMessage());
+    public ResponseEntity<ErrorResponse> manejarNoImplementado(
+            FuncionalidadNoDisponibleException ex, HttpServletRequest request) {
+        return crearRespuesta(
+                HttpStatus.NOT_IMPLEMENTED,
+                ex.getMessage() != null
+                        ? ex.getMessage()
+                        : HttpStatus.NOT_IMPLEMENTED.getReasonPhrase(),
+                request
+        );
     }
 
-    /**
-     * Traduce rechazos o datos inconsistentes del Sistema Dueno a HTTP 502.
-     *
-     * @param ex excepcion de rechazo del Sistema Dueno
-     * @return respuesta 502 Bad Gateway
-     */
+    // 502 - El Sistema Dueño rechazó la operación
     @ExceptionHandler(SistemaDuenoRechazoException.class)
-    public ResponseEntity<Map<String, Object>> manejarRechazoRemoto(
-            SistemaDuenoRechazoException ex) {
-        return construirRespuesta(HttpStatus.BAD_GATEWAY, ex.getMessage());
+    public ResponseEntity<ErrorResponse> manejarRechazoSistemaDueno(
+            SistemaDuenoRechazoException ex, HttpServletRequest request) {
+        return crearRespuesta(
+                HttpStatus.BAD_GATEWAY,
+                "El Sistema Dueño rechazó la operación.",
+                request
+        );
     }
 
-    /**
-     * Traduce indisponibilidad o timeouts del Sistema Dueno a HTTP 503.
-     *
-     * @param ex excepcion de indisponibilidad del Sistema Dueno
-     * @return respuesta 503 Service Unavailable
-     */
+    // 503 - El Sistema Dueño no está disponible
     @ExceptionHandler(SistemaDuenoNoDisponibleException.class)
-    public ResponseEntity<Map<String, Object>> manejarNoDisponibleRemoto(
-            SistemaDuenoNoDisponibleException ex) {
-        return construirRespuesta(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
-    }
-
-    private ResponseEntity<Map<String, Object>> construirRespuesta(
-            HttpStatus estado, String mensaje) {
-        Map<String, Object> cuerpo = Map.of(
-                "status", estado.value(),
-                "error", estado.getReasonPhrase(),
-                "mensaje", mensaje != null ? mensaje : estado.getReasonPhrase());
-        return ResponseEntity.status(estado).body(cuerpo);
+    public ResponseEntity<ErrorResponse> manejarSistemaDuenoNoDisponible(
+            SistemaDuenoNoDisponibleException ex, HttpServletRequest request) {
+        return crearRespuesta(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "El Sistema Dueño no está disponible temporalmente.",
+                request
+        );
     }
 }
