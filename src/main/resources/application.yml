@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: IDSISTEMA
+
+server:
+  port: 8080
+
+# Sistema Dueño de las Pólizas (única fuente de datos)
+sistema-dueno:
+  url-base: http://nachintoch.mx:8080
+  timeouts:
+    conexion: 5s
+    # ERS req. 10: el Sistema Dueño se considera no disponible tras 3 minutos.
+    # Pendiente de acordar con el analista un valor menor (mediciones: 0.16 a 2.07 s).
+    lectura: 180s
