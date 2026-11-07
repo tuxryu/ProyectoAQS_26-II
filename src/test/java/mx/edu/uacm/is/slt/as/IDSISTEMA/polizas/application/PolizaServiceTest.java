@@ -210,5 +210,18 @@ class PolizaServiceTest {
                     + nombres + ":" + primerApellido + ":" + segundoApellido;
             return datos;
         }
-    }
+        @Override
+        public Poliza actualizarPoliza(Poliza poliza) {
+            return poliza;
+        }
+
+        @Override
+        public Poliza registrarPoliza(Poliza poliza) {
+            return poliza;
+        }
+
+        @Override
+        public Optional<Poliza> consultarPorId(String id) {
+            return Optional.empty();
+        }     }
 }
