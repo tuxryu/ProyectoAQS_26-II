@@ -302,17 +302,19 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
 
     @Override
     public Poliza actualizarPoliza(Poliza poliza) {
-        // TODO: Implementar llamada REST si el Sistema Dueño soporta POST/PUT de actualización
-        throw new UnsupportedOperationException("La actualización remota de pólizas aún no está soportada.");
+        throw new UnsupportedOperationException(
+                "La actualización remota de pólizas aún no está soportada.");
     }
+
     @Override
     public Poliza registrarPoliza(Poliza poliza) {
-        // TODO: Implementar llamada REST si el Sistema Dueño soporta POST de registro
-        throw new UnsupportedOperationException("El registro remoto de pólizas aún no está soportado.");
+        throw new UnsupportedOperationException(
+                "El registro remoto de pólizas aún no está soportado.");
     }
+
     @Override
     public Optional<Poliza> consultarPorId(String id) {
-        // TODO: Implementar consulta remota por ID o delegar a buscarPorClave si el ID es un UUID
-        throw new UnsupportedOperationException("La consulta por ID de póliza aún no está soportada.");
+        throw new UnsupportedOperationException(
+                "La consulta por ID de póliza aún no está soportada.");
     }
 }

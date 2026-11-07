@@ -6,7 +6,6 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.exception.ClienteNoEncont
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.exception.CurpInvalidaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.RecursoNoEncontradoException;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
