@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -22,20 +23,8 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 
 /**
- * Adaptador de salida REST hacia el Sistema Dueno para las consultas GET de
- * polizas (lectura por clave y listados con filtro). Implementa
- * {@link PolizaRemotaPort}: cada fila JSON se valida como {@link PolizaRemotaDto}
- * y despues se convierte a la entidad de dominio {@link Poliza}.
- *
- * <p>Reglas aplicadas (hallazgos del Sistema Dueno):
- * <ul>
- *   <li>CURP y nombres se envian tal cual, sin normalizar mayusculas.</li>
- *   <li>Los segmentos de ruta se codifican; se rechazan / y \ antes de llamar.</li>
- *   <li>Lectura individual con 200 vacio: Optional.empty().</li>
- *   <li>Listas vacias []: lista vacia, no es error.</li>
- *   <li>Filas invalidas de otros equipos se omiten y se registran en log.</li>
- *   <li>HTTP 500: rechazo (502); 502/503/504, timeout o red: no disponible (503).</li>
- * </ul>
+ * Adaptador de salida REST hacia el Sistema Dueno para operaciones de lectura
+ * y escritura de polizas (POST, PUT, DELETE).
  */
 @Component
 public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
@@ -54,12 +43,61 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
     }
 
     /**
-     * Consulta una poliza por su clave (GET /poliza/{clave}).
+     * Registra una nueva poliza en el Sistema Dueno.
      *
-     * @param clave clave UUID de la poliza
-     * @return Optional con la poliza o Optional.empty() si el servidor responde 200 vacio
-     * @throws SistemaDuenoRechazoException si la poliza devuelta tiene datos inconsistentes
+     * @param poliza entidad de dominio a guardar
+     * @return poliza registrada devuelta por el servidor
      */
+    public Poliza guardar(Poliza poliza) {
+        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
+        PolizaRemotaDto dto = convertirADto(poliza);
+
+        Map<?, ?> respuesta = ejecutar(() -> restClient.post()
+                .uri("/polizas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(dto)
+                .retrieve()
+                .body(Map.class));
+
+        if (respuesta == null || respuesta.isEmpty()) {
+            throw new SistemaDuenoRechazoException(
+                    "El servidor devolvio una respuesta vacia al crear la poliza.");
+        }
+        return convertirADominio(convertirFila(respuesta));
+    }
+
+    /**
+     * Actualiza una poliza existente en el Sistema Dueno (PUT /poliza/{clave}).
+     *
+     * @param clave clave UUID de la poliza a actualizar
+     * @param poliza datos actualizados de la poliza
+     */
+    public void actualizar(UUID clave, Poliza poliza) {
+        Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
+        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
+        PolizaRemotaDto dto = convertirADto(poliza);
+
+        ejecutar(() -> restClient.put()
+                .uri("/poliza/{clave}", clave)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(dto)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    /**
+     * Elimina una poliza por su clave en el Sistema Dueno (DELETE /poliza/{clave}).
+     *
+     * @param clave clave UUID de la poliza a eliminar
+     */
+    public void eliminar(UUID clave) {
+        Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
+        ejecutar(() -> restClient.delete()
+                .uri("/poliza/{clave}", clave)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
     @Override
     public Optional<Poliza> buscarPorClave(UUID clave) {
         Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
@@ -78,35 +116,17 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
         }
     }
 
-    /**
-     * Lista todas las polizas registradas en el Sistema Dueno (GET /polizas).
-     *
-     * @return polizas validas; lista vacia si no hay resultados
-     */
     @Override
     public List<Poliza> listarTodas() {
         return consultarLista("/polizas");
     }
 
-    /**
-     * Lista las polizas de un cliente por su CURP (GET /polizas/{curp}). La CURP
-     * se envia tal cual porque el servidor distingue mayusculas y minusculas.
-     *
-     * @param curp CURP del cliente titular
-     * @return polizas validas del cliente; lista vacia si no hay resultados
-     */
     @Override
     public List<Poliza> buscarPorCurp(String curp) {
         validarSegmentoObligatorio(curp, "La CURP");
         return consultarLista("/polizas/{curp}", curp);
     }
 
-    /**
-     * Lista las polizas de un tipo (GET /polizas/{tipo}).
-     *
-     * @param tipo tipo de poliza (0 = Auto, 1 = Vida, 2 = Medico)
-     * @return polizas validas del tipo indicado; lista vacia si no hay resultados
-     */
     @Override
     public List<Poliza> buscarPorTipo(int tipo) {
         if (tipo < TIPO_MINIMO || tipo > TIPO_MAXIMO) {
@@ -116,30 +136,12 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
         return consultarLista("/polizas/{tipo}", tipo);
     }
 
-    /**
-     * Lista las polizas cuyo titular coincide con el nombre indicado
-     * (GET /polizas/c/{nombres}/{primerApellido}[/{segundoApellido}]).
-     *
-     * @param nombres nombres del cliente
-     * @param primerApellido primer apellido del cliente
-     * @param segundoApellido segundo apellido del cliente (opcional, puede ser null)
-     * @return polizas validas; lista vacia si no hay resultados
-     */
     @Override
     public List<Poliza> buscarPorCliente(
             String nombres, String primerApellido, String segundoApellido) {
         return buscarPorPersona("c", nombres, primerApellido, segundoApellido);
     }
 
-    /**
-     * Lista las polizas que tienen un beneficiario con el nombre indicado
-     * (GET /polizas/b/{nombres}/{primerApellido}[/{segundoApellido}]).
-     *
-     * @param nombres nombres del beneficiario
-     * @param primerApellido primer apellido del beneficiario
-     * @param segundoApellido segundo apellido del beneficiario (opcional, puede ser null)
-     * @return polizas validas; lista vacia si no hay resultados
-     */
     @Override
     public List<Poliza> buscarPorBeneficiario(
             String nombres, String primerApellido, String segundoApellido) {
@@ -177,6 +179,15 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
             }
         }
         return List.copyOf(polizas);
+    }
+
+    private PolizaRemotaDto convertirADto(Poliza poliza) {
+        return new PolizaRemotaDto(
+                poliza.getClave(),
+                poliza.getTipo(),
+                BigDecimal.valueOf((double) poliza.getMonto()),
+                poliza.getDescripcion(),
+                poliza.getCurpCliente());
     }
 
     private Poliza convertirADominio(PolizaRemotaDto dto) {
