@@ -1,7 +1,9 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.in.web.dto;
+
 import java.time.LocalDate;
 import java.util.UUID;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
+
 /**
  * DTO de respuesta para los endpoints REST del modulo de beneficiarios.
  *
@@ -12,7 +14,6 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
  * @param fechaNacimiento fecha de nacimiento del beneficiario
  * @param porcentaje porcentaje asignado (1..100)
  */
-
 public record BeneficiarioRespuestaDto(
         UUID clavePoliza,
         String nombres,
@@ -20,6 +21,7 @@ public record BeneficiarioRespuestaDto(
         String segundoApellido,
         LocalDate fechaNacimiento,
         int porcentaje) {
+
     /**
      * Convierte una entidad de dominio {@link Beneficiario} a DTO de respuesta.
      *

@@ -1,4 +1,5 @@
-package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.in.web.dto;
+package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.in.web;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
@@ -21,6 +22,7 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.Consult
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
+
 /**
  * Adaptador REST de entrada para el modulo de beneficiarios: alta vinculada a
  * una poliza (POST /polizas/{clave}/beneficiarios) y consultas GET (por llave
@@ -28,8 +30,8 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalida
  */
 @RestController
 @RequestMapping("/polizas/{clave}/beneficiarios")
-
 public class BeneficiarioController {
+
     private final AltaBeneficiarioUseCase altaBeneficiarioUseCase;
     private final ConsultaBeneficiarioUseCase consultaBeneficiarioUseCase;
 
@@ -43,6 +45,7 @@ public class BeneficiarioController {
                 consultaBeneficiarioUseCase,
                 "El caso de uso ConsultaBeneficiarioUseCase es obligatorio.");
     }
+
     /**
      * Registra un beneficiario vinculado a la poliza indicada
      * (POST /polizas/{clave}/beneficiarios).
@@ -76,6 +79,7 @@ public class BeneficiarioController {
         Beneficiario registrado = altaBeneficiarioUseCase.registrar(nuevo);
         return BeneficiarioRespuestaDto.desde(registrado);
     }
+
     /**
      * Consulta los beneficiarios de una poliza (GET /polizas/{clave}/beneficiarios).
      * Si no se envian parametros de filtro, devuelve la lista de beneficiarios
@@ -113,7 +117,7 @@ public class BeneficiarioController {
         if (nombres == null || primerApellido == null || fechaNacimiento == null) {
             throw new SolicitudInvalidaException(
                     "Para consultar un beneficiario individual se requieren "
-                            + "nombres, primerApellido y fechaNacimiento.");
+                    + "nombres, primerApellido y fechaNacimiento.");
         }
         Beneficiario encontrado = consultaBeneficiarioUseCase.consultarPorDatos(
                 clave,
@@ -123,6 +127,7 @@ public class BeneficiarioController {
                 fechaNacimiento);
         return ResponseEntity.ok(BeneficiarioRespuestaDto.desde(encontrado));
     }
+
     private String normalizarSegundoApellido(String segundoApellido) {
         if (segundoApellido == null || segundoApellido.trim().isEmpty()) {
             return null;

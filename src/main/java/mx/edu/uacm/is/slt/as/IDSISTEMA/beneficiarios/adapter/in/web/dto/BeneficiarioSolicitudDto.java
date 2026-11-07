@@ -1,5 +1,7 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.in.web.dto;
+
 import java.time.LocalDate;
+
 /**
  * DTO de entrada para registrar un beneficiario vinculado a una poliza.
  *
