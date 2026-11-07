@@ -1,5 +1,4 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.out.rest;
-
 import java.time.LocalDate;
 import java.util.Objects;
 import java.util.Optional;
