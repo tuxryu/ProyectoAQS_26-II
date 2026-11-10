@@ -14,7 +14,6 @@ public interface ConsultaClienteUseCase {
      *
      * @param curp CURP del cliente
      * @return el cliente encontrado
-     * @throws mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.exception.ClienteNoEncontradoException
      *         si no existe
      */
     Cliente consultarPorCurp(String curp);
