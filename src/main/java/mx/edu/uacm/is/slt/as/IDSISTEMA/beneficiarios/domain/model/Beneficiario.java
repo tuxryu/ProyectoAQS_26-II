@@ -5,6 +5,7 @@ import java.util.Objects;
 import java.util.UUID;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.exception.PorcentajeInvalidoException;
 
 /**
  * Entidad de dominio que representa un beneficiario de una poliza.
@@ -47,7 +48,7 @@ public class Beneficiario {
 
     private void validarPorcentaje(int valorPorcentaje) {
         if (valorPorcentaje < PORCENTAJE_MINIMO || valorPorcentaje > PORCENTAJE_MAXIMO) {
-            throw new IllegalArgumentException("El porcentaje debe estar entre 1 y 100.");
+            throw new PorcentajeInvalidoException(valorPorcentaje);
         }
     }
 

@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.Objects;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.exception.CurpInvalidaException;
 
 /**
  * Entidad de dominio que representa un cliente titular de polizas.
@@ -55,14 +56,14 @@ public class Cliente {
 
     private void validarCurp(String valorCurp) {
         if (valorCurp == null || valorCurp.trim().isEmpty()) {
-            throw new IllegalArgumentException("El CURP no puede ser nulo ni vacio.");
+            throw new CurpInvalidaException("El CURP no puede ser nulo ni vacio.");
         }
         if (valorCurp.length() != LONGITUD_CURP) {
-            throw new IllegalArgumentException(
+            throw new CurpInvalidaException(
                     "El CURP debe tener exactamente 18 caracteres.");
         }
         if (valorCurp.contains("/") || valorCurp.contains("\\")) {
-            throw new IllegalArgumentException("El CURP no puede contener diagonales.");
+            throw new CurpInvalidaException("El CURP no puede contener diagonales.");
         }
     }
 
