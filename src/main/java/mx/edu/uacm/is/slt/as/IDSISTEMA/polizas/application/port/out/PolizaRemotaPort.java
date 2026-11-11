@@ -6,11 +6,11 @@ import java.util.UUID;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 
 /**
- * Puerto de salida hacia el Sistema Dueño para la gestión de pólizas.
+ * Puerto de salida hacia el Sistema Dueno para las lecturas de polizas.
+ * Las operaciones de escritura (guardar, actualizar, eliminar) se agregaran con
+ * sus casos de uso.
  */
 public interface PolizaRemotaPort {
-
-    Optional<Poliza> consultarPorId(String id);
 
     Optional<Poliza> buscarPorClave(UUID clave);
 
@@ -25,8 +25,4 @@ public interface PolizaRemotaPort {
 
     List<Poliza> buscarPorBeneficiario(
             String nombres, String primerApellido, String segundoApellido);
-
-    Poliza registrarPoliza(Poliza poliza);
-
-    Poliza actualizarPoliza(Poliza poliza);
 }

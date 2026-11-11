@@ -299,22 +299,4 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
         return new SistemaDuenoRechazoException(
                 "Error inesperado del Sistema Dueno (HTTP " + codigo + ").", ex);
     }
-
-    @Override
-    public Poliza actualizarPoliza(Poliza poliza) {
-        throw new UnsupportedOperationException(
-                "La actualización remota de pólizas aún no está soportada.");
-    }
-
-    @Override
-    public Poliza registrarPoliza(Poliza poliza) {
-        throw new UnsupportedOperationException(
-                "El registro remoto de pólizas aún no está soportado.");
-    }
-
-    @Override
-    public Optional<Poliza> consultarPorId(String id) {
-        throw new UnsupportedOperationException(
-                "La consulta por ID de póliza aún no está soportada.");
-    }
 }

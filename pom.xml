@@ -16,7 +16,7 @@
 	<description>Sistema intermediario de polizas de seguro (prototipo, Arquitectura Limpia)</description>
 	<url/>
 	<properties>
-		<java.version>21</java.version>
+		<java.version>25</java.version>
 		<archunit.version>1.4.1</archunit.version>
 		<checkstyle.version>14.3.0</checkstyle.version>
 	</properties>
