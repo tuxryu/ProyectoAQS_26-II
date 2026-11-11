@@ -23,8 +23,20 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 
 /**
- * Adaptador de salida REST hacia el Sistema Dueno para operaciones de lectura
- * y escritura de polizas (POST, PUT, DELETE).
+ * Adaptador de salida REST hacia el Sistema Dueno para las consultas GET y
+ * operaciones de escritura (POST, PUT, DELETE) de polizas. Implementa
+ * {@link PolizaRemotaPort}: cada fila JSON se valida como {@link PolizaRemotaDto}
+ * y despues se convierte a la entidad de dominio {@link Poliza}.
+ *
+ * <p>Reglas aplicadas (hallazgos del Sistema Dueno):
+ * <ul>
+ *   <li>CURP y nombres se envian tal cual, sin normalizar mayusculas.</li>
+ *   <li>Los segmentos de ruta se codifican; se rechazan / y \ antes de llamar.</li>
+ *   <li>Lectura individual con 200 vacio: Optional.empty().</li>
+ *   <li>Listas vacias []: lista vacia, no es error.</li>
+ *   <li>Filas invalidas de otros equipos se omiten y se registran en log.</li>
+ *   <li>HTTP 500: rechazo (502); 502/503/504, timeout o red: no disponible (503).</li>
+ * </ul>
  */
 @Component
 public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
@@ -37,6 +49,11 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
 
     private final RestClient restClient;
 
+    /**
+     * Crea el adaptador con el cliente HTTP configurado hacia el Sistema Dueno.
+     *
+     * @param restClient cliente HTTP RestClient (obligatorio)
+     */
     public PolizaSistemaDuenoAdapter(RestClient restClient) {
         this.restClient = Objects.requireNonNull(
                 restClient, "El cliente HTTP RestClient es obligatorio.");
@@ -98,6 +115,13 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
                 .toBodilessEntity());
     }
 
+    /**
+     * Consulta una poliza por su clave (GET /poliza/{clave}). Si el servidor
+     * responde 200 con cuerpo vacio, devuelve {@link Optional#empty()}.
+     *
+     * @param clave clave UUID de la poliza
+     * @return Optional con la poliza o vacio si no existe
+     */
     @Override
     public Optional<Poliza> buscarPorClave(UUID clave) {
         Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
@@ -116,17 +140,34 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
         }
     }
 
+    /**
+     * Lista todas las polizas registradas (GET /polizas), omitiendo filas invalidas.
+     *
+     * @return lista inmutable de polizas validas
+     */
     @Override
     public List<Poliza> listarTodas() {
         return consultarLista("/polizas");
     }
 
+    /**
+     * Lista las polizas asociadas a una CURP (GET /polizas/{curp}) enviandola tal cual.
+     *
+     * @param curp CURP del titular
+     * @return polizas validas asociadas a la CURP
+     */
     @Override
     public List<Poliza> buscarPorCurp(String curp) {
         validarSegmentoObligatorio(curp, "La CURP");
         return consultarLista("/polizas/{curp}", curp);
     }
 
+    /**
+     * Lista las polizas de un tipo especifico (GET /polizas/{tipo}).
+     *
+     * @param tipo tipo de poliza entre 0 y 2
+     * @return polizas validas de ese tipo
+     */
     @Override
     public List<Poliza> buscarPorTipo(int tipo) {
         if (tipo < TIPO_MINIMO || tipo > TIPO_MAXIMO) {
@@ -136,12 +177,30 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
         return consultarLista("/polizas/{tipo}", tipo);
     }
 
+    /**
+     * Lista las polizas cuyo titular coincide con el nombre indicado
+     * (GET /polizas/c/{nombres}/{primerApellido}[/{segundoApellido}]).
+     *
+     * @param nombres nombres del cliente
+     * @param primerApellido primer apellido del cliente
+     * @param segundoApellido segundo apellido del cliente (opcional, puede ser null)
+     * @return polizas validas; lista vacia si no hay resultados
+     */
     @Override
     public List<Poliza> buscarPorCliente(
             String nombres, String primerApellido, String segundoApellido) {
         return buscarPorPersona("c", nombres, primerApellido, segundoApellido);
     }
 
+    /**
+     * Lista las polizas que tienen un beneficiario con el nombre indicado
+     * (GET /polizas/b/{nombres}/{primerApellido}[/{segundoApellido}]).
+     *
+     * @param nombres nombres del beneficiario
+     * @param primerApellido primer apellido del beneficiario
+     * @param segundoApellido segundo apellido del beneficiario (opcional, puede ser null)
+     * @return polizas validas; lista vacia si no hay resultados
+     */
     @Override
     public List<Poliza> buscarPorBeneficiario(
             String nombres, String primerApellido, String segundoApellido) {

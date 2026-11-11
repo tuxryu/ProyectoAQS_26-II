@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.application.port.in.ConsultarClienteUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.RecursoNoEncontradoException;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
