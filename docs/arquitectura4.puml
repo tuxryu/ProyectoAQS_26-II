@@ -49,7 +49,7 @@ rectangle "Capa 3: Adaptadores de Salida (REST hacia Sistema Dueño e Inter-mód
 }
 
 cloud "Capa 4: Infraestructura Remota y única fuente de datos" as C4b #FDECEC {
-  component "<<Sistema Externo>>\nSistema Dueño de Pólizas\nhttp://nachintoch.mx:8080\n--\n• 15 endpoints: 9 GET, 3 POST, 2 PUT, 1 DELETE\n• Respuesta JSON\n• POST = upsert; casi no valida; DELETE en cascada\n• Sin endpoints para listar clientes ni editar/borrar beneficiarios\n  Posiblemente se tenga que hacer de forma compuesta" as EXT #FFC0CB
+  component "<<Sistema Externo>>\nSistema Dueño de Pólizas\nhttp://nachintoch.mx:8080\n--\n• 17 endpoints: 11 GET, 3 POST, 2 PUT, 1 DELETE\n• Incluye GET /clientes y GET /beneficiarios\n• Respuesta JSON en camelCase\n• POST = upsert; casi no valida; DELETE en cascada" as EXT #FFC0CB
 }
 
 UI --> ACli : HTTP
