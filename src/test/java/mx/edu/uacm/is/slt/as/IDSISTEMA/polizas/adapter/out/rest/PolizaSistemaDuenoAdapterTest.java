@@ -29,9 +29,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
- * Pruebas unitarias con MockRestServiceServer para las consultas GET y
- * operaciones de escritura de PolizaSistemaDuenoAdapter. Los JSON replican
- * respuestas reales del Sistema Dueno.
+ * Pruebas unitarias con MockRestServiceServer para las consultas GET de
+ * PolizaSistemaDuenoAdapter. Los JSON replican respuestas reales del Sistema Dueno.
  */
 class PolizaSistemaDuenoAdapterTest {
 

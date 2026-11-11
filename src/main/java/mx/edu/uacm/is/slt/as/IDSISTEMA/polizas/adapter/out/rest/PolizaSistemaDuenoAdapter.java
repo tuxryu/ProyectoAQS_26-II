@@ -23,8 +23,8 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 
 /**
- * Adaptador de salida REST hacia el Sistema Dueno para las consultas GET y
- * operaciones de escritura (POST, PUT, DELETE) de polizas. Implementa
+ * Adaptador de salida REST hacia el Sistema Dueno para las consultas GET de
+ * polizas (lectura por clave y listados con filtro). Implementa
  * {@link PolizaRemotaPort}: cada fila JSON se valida como {@link PolizaRemotaDto}
  * y despues se convierte a la entidad de dominio {@link Poliza}.
  *
@@ -49,78 +49,17 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
 
     private final RestClient restClient;
 
-    /**
-     * Crea el adaptador con el cliente HTTP configurado hacia el Sistema Dueno.
-     *
-     * @param restClient cliente HTTP RestClient (obligatorio)
-     */
     public PolizaSistemaDuenoAdapter(RestClient restClient) {
         this.restClient = Objects.requireNonNull(
                 restClient, "El cliente HTTP RestClient es obligatorio.");
     }
 
     /**
-     * Registra una nueva poliza en el Sistema Dueno.
-     *
-     * @param poliza entidad de dominio a guardar
-     * @return poliza registrada devuelta por el servidor
-     */
-    public Poliza guardar(Poliza poliza) {
-        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
-        PolizaRemotaDto dto = convertirADto(poliza);
-
-        Map<?, ?> respuesta = ejecutar(() -> restClient.post()
-                .uri("/polizas")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(dto)
-                .retrieve()
-                .body(Map.class));
-
-        if (respuesta == null || respuesta.isEmpty()) {
-            throw new SistemaDuenoRechazoException(
-                    "El servidor devolvio una respuesta vacia al crear la poliza.");
-        }
-        return convertirADominio(convertirFila(respuesta));
-    }
-
-    /**
-     * Actualiza una poliza existente en el Sistema Dueno (PUT /poliza/{clave}).
-     *
-     * @param clave clave UUID de la poliza a actualizar
-     * @param poliza datos actualizados de la poliza
-     */
-    public void actualizar(UUID clave, Poliza poliza) {
-        Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
-        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
-        PolizaRemotaDto dto = convertirADto(poliza);
-
-        ejecutar(() -> restClient.put()
-                .uri("/poliza/{clave}", clave)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(dto)
-                .retrieve()
-                .toBodilessEntity());
-    }
-
-    /**
-     * Elimina una poliza por su clave en el Sistema Dueno (DELETE /poliza/{clave}).
-     *
-     * @param clave clave UUID de la poliza a eliminar
-     */
-    public void eliminar(UUID clave) {
-        Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
-        ejecutar(() -> restClient.delete()
-                .uri("/poliza/{clave}", clave)
-                .retrieve()
-                .toBodilessEntity());
-    }
-
-    /**
-     * Consulta una poliza por su clave (GET /poliza/{clave}). Si el servidor
-     * responde 200 con cuerpo vacio, devuelve {@link Optional#empty()}.
+     * Consulta una poliza por su clave (GET /poliza/{clave}).
      *
      * @param clave clave UUID de la poliza
-     * @return Optional con la poliza o vacio si no existe
+     * @return Optional con la poliza o Optional.empty() si el servidor responde 200 vacio
+     * @throws SistemaDuenoRechazoException si la poliza devuelta tiene datos inconsistentes
      */
     @Override
     public Optional<Poliza> buscarPorClave(UUID clave) {
@@ -141,9 +80,9 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
     }
 
     /**
-     * Lista todas las polizas registradas (GET /polizas), omitiendo filas invalidas.
+     * Lista todas las polizas registradas en el Sistema Dueno (GET /polizas).
      *
-     * @return lista inmutable de polizas validas
+     * @return polizas validas; lista vacia si no hay resultados
      */
     @Override
     public List<Poliza> listarTodas() {
@@ -151,10 +90,11 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
     }
 
     /**
-     * Lista las polizas asociadas a una CURP (GET /polizas/{curp}) enviandola tal cual.
+     * Lista las polizas de un cliente por su CURP (GET /polizas/{curp}). La CURP
+     * se envia tal cual porque el servidor distingue mayusculas y minusculas.
      *
-     * @param curp CURP del titular
-     * @return polizas validas asociadas a la CURP
+     * @param curp CURP del cliente titular
+     * @return polizas validas del cliente; lista vacia si no hay resultados
      */
     @Override
     public List<Poliza> buscarPorCurp(String curp) {
@@ -163,10 +103,10 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
     }
 
     /**
-     * Lista las polizas de un tipo especifico (GET /polizas/{tipo}).
+     * Lista las polizas de un tipo (GET /polizas/{tipo}).
      *
-     * @param tipo tipo de poliza entre 0 y 2
-     * @return polizas validas de ese tipo
+     * @param tipo tipo de poliza (0 = Auto, 1 = Vida, 2 = Medico)
+     * @return polizas validas del tipo indicado; lista vacia si no hay resultados
      */
     @Override
     public List<Poliza> buscarPorTipo(int tipo) {
@@ -238,15 +178,6 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
             }
         }
         return List.copyOf(polizas);
-    }
-
-    private PolizaRemotaDto convertirADto(Poliza poliza) {
-        return new PolizaRemotaDto(
-                poliza.getClave(),
-                poliza.getTipo(),
-                BigDecimal.valueOf((double) poliza.getMonto()),
-                poliza.getDescripcion(),
-                poliza.getCurpCliente());
     }
 
     private Poliza convertirADominio(PolizaRemotaDto dto) {
@@ -368,5 +299,70 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
         }
         return new SistemaDuenoRechazoException(
                 "Error inesperado del Sistema Dueno (HTTP " + codigo + ").", ex);
+    }
+
+    /**
+     * Registra una nueva poliza en el Sistema Dueno (POST /polizas).
+     *
+     * @param poliza entidad de dominio a guardar
+     * @return poliza registrada devuelta por el servidor
+     */
+    public Poliza guardar(Poliza poliza) {
+        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
+        PolizaRemotaDto dto = convertirADto(poliza);
+
+        Map<?, ?> respuesta = ejecutar(() -> restClient.post()
+                .uri("/polizas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(dto)
+                .retrieve()
+                .body(Map.class));
+
+        if (respuesta == null || respuesta.isEmpty()) {
+            throw new SistemaDuenoRechazoException(
+                    "El servidor devolvio una respuesta vacia al crear la poliza.");
+        }
+        return convertirADominio(convertirFila(respuesta));
+    }
+
+    /**
+     * Actualiza una poliza existente en el Sistema Dueno (PUT /poliza/{clave}).
+     *
+     * @param clave clave UUID de la poliza a actualizar
+     * @param poliza datos actualizados de la poliza
+     */
+    public void actualizar(UUID clave, Poliza poliza) {
+        Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
+        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
+        PolizaRemotaDto dto = convertirADto(poliza);
+
+        ejecutar(() -> restClient.put()
+                .uri("/poliza/{clave}", clave)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(dto)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    /**
+     * Elimina una poliza por su clave en el Sistema Dueno (DELETE /poliza/{clave}).
+     *
+     * @param clave clave UUID de la poliza a eliminar
+     */
+    public void eliminar(UUID clave) {
+        Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
+        ejecutar(() -> restClient.delete()
+                .uri("/poliza/{clave}", clave)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    private PolizaRemotaDto convertirADto(Poliza poliza) {
+        return new PolizaRemotaDto(
+                poliza.getClave(),
+                poliza.getTipo(),
+                BigDecimal.valueOf((double) poliza.getMonto()),
+                poliza.getDescripcion(),
+                poliza.getCurpCliente());
     }
 }
