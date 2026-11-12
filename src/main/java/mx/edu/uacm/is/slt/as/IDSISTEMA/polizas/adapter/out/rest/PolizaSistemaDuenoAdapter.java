@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -298,5 +299,70 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
         }
         return new SistemaDuenoRechazoException(
                 "Error inesperado del Sistema Dueno (HTTP " + codigo + ").", ex);
+    }
+
+    /**
+     * Registra una nueva poliza en el Sistema Dueno (POST /polizas).
+     *
+     * @param poliza entidad de dominio a guardar
+     * @return poliza registrada devuelta por el servidor
+     */
+    public Poliza guardar(Poliza poliza) {
+        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
+        PolizaRemotaDto dto = convertirADto(poliza);
+
+        Map<?, ?> respuesta = ejecutar(() -> restClient.post()
+                .uri("/polizas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(dto)
+                .retrieve()
+                .body(Map.class));
+
+        if (respuesta == null || respuesta.isEmpty()) {
+            throw new SistemaDuenoRechazoException(
+                    "El servidor devolvio una respuesta vacia al crear la poliza.");
+        }
+        return convertirADominio(convertirFila(respuesta));
+    }
+
+    /**
+     * Actualiza una poliza existente en el Sistema Dueno (PUT /poliza/{clave}).
+     *
+     * @param clave clave UUID de la poliza a actualizar
+     * @param poliza datos actualizados de la poliza
+     */
+    public void actualizar(UUID clave, Poliza poliza) {
+        Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
+        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
+        PolizaRemotaDto dto = convertirADto(poliza);
+
+        ejecutar(() -> restClient.put()
+                .uri("/poliza/{clave}", clave)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(dto)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    /**
+     * Elimina una poliza por su clave en el Sistema Dueno (DELETE /poliza/{clave}).
+     *
+     * @param clave clave UUID de la poliza a eliminar
+     */
+    public void eliminar(UUID clave) {
+        Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
+        ejecutar(() -> restClient.delete()
+                .uri("/poliza/{clave}", clave)
+                .retrieve()
+                .toBodilessEntity());
+    }
+
+    private PolizaRemotaDto convertirADto(Poliza poliza) {
+        return new PolizaRemotaDto(
+                poliza.getClave(),
+                poliza.getTipo(),
+                BigDecimal.valueOf((double) poliza.getMonto()),
+                poliza.getDescripcion(),
+                poliza.getCurpCliente());
     }
 }
