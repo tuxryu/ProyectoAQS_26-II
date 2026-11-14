@@ -20,8 +20,8 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.FechasSistemaD
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.TraductorExcepcionesSistemaDueno;
 
 /**
- * Adaptador REST de salida hacia el Sistema Dueno para consultas, listado por
- * poliza (GET /beneficiarios) y alta de beneficiarios (POST).
+ * Adaptador REST de salida hacia el Sistema Dueno para consultas, listado
+ * general y por poliza (GET /beneficiarios) y alta de beneficiarios (POST).
  */
 @Component
 public class BeneficiarioSistemaDuenoAdapter
@@ -88,8 +88,7 @@ public class BeneficiarioSistemaDuenoAdapter
     }
 
     @Override
-    public List<Beneficiario> listarPorPoliza(UUID clavePoliza) {
-        Objects.requireNonNull(clavePoliza, "La clave de poliza es obligatoria.");
+    public List<Beneficiario> listarTodos() {
         BeneficiarioRemotoDto[] filas = TraductorExcepcionesSistemaDueno.ejecutar(
                 () -> restClient.get()
                         .uri("/beneficiarios")
@@ -103,13 +102,13 @@ public class BeneficiarioSistemaDuenoAdapter
         List<Beneficiario> resultado = new ArrayList<>();
         for (BeneficiarioRemotoDto fila : filas) {
             if (fila == null || fila.id() == null) {
+                LOG.warn(
+                        "Se omite un beneficiario invalido del Sistema Dueno (id nulo): {}",
+                        fila);
                 continue;
             }
             try {
-                Beneficiario beneficiario = convertirADominio(fila);
-                if (clavePoliza.equals(beneficiario.getClavePoliza())) {
-                    resultado.add(beneficiario);
-                }
+                resultado.add(convertirADominio(fila));
             } catch (IllegalArgumentException | NullPointerException ex) {
                 LOG.warn(
                         "Se omite un beneficiario invalido del Sistema Dueno ({}): {}",
@@ -118,6 +117,14 @@ public class BeneficiarioSistemaDuenoAdapter
             }
         }
         return List.copyOf(resultado);
+    }
+
+    @Override
+    public List<Beneficiario> listarPorPoliza(UUID clavePoliza) {
+        Objects.requireNonNull(clavePoliza, "La clave de poliza es obligatoria.");
+        return listarTodos().stream()
+                .filter(beneficiario -> clavePoliza.equals(beneficiario.getClavePoliza()))
+                .toList();
     }
 
     @Override

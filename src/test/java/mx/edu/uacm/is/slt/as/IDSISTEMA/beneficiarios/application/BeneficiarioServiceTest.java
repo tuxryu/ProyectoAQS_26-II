@@ -174,6 +174,11 @@ class BeneficiarioServiceTest {
         }
 
         @Override
+        public List<Beneficiario> listarTodos() {
+            return List.copyOf(almacen);
+        }
+
+        @Override
         public List<Beneficiario> listarPorPoliza(UUID clavePoliza) {
             return almacen.stream()
                     .filter(b -> Objects.equals(b.getClavePoliza(), clavePoliza))

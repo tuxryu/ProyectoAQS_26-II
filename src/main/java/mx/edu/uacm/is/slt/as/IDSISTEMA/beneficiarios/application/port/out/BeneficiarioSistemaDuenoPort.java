@@ -29,6 +29,14 @@ public interface BeneficiarioSistemaDuenoPort {
             String segundoApellido);
 
     /**
+     * Obtiene todos los beneficiarios registrados en el Sistema Dueno
+     * consumiendo GET /beneficiarios con tolerancia a fallos fila por fila.
+     *
+     * @return lista de beneficiarios validos devueltos por el Sistema Dueno
+     */
+    List<Beneficiario> listarTodos();
+
+    /**
      * Lista todos los beneficiarios registrados para la poliza indicada
      * consumiendo el endpoint GET /beneficiarios del Sistema Dueno.
      *
