@@ -1,7 +1,7 @@
-
 package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.out.rest;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +27,8 @@ class BeneficiarioSistemaDuenoAdapterTest {
     private static final String URL_BASE = "http://nachintoch.mx:8080";
     private static final String CLAVE
             = "1c79ca05-4cc1-46ab-8f67-7d18d6959ac3";
+    private static final String OTRA_CLAVE
+            = "22222222-2222-2222-2222-222222222222";
 
     private MockRestServiceServer mockServer;
     private BeneficiarioSistemaDuenoAdapter adapter;
@@ -136,6 +138,91 @@ class BeneficiarioSistemaDuenoAdapterTest {
                         "Prueba",
                         null));
 
+        mockServer.verify();
+    }
+
+    @Test
+    void debeListarBeneficiariosPorPolizaFiltrandoYOmitiendoFilasCorruptas() {
+        String json = """
+                [
+                  {
+                    "id": {
+                      "nombres": "Mario",
+                      "primerApellido": "Prueba",
+                      "segundoApellido": "Lopez",
+                      "fechaNacimiento": "2000-02-02T06:00:00.000+00:00",
+                      "clavePoliza": "%s"
+                    },
+                    "porcentaje": 60
+                  },
+                  {
+                    "id": {
+                      "nombres": "Invalido",
+                      "primerApellido": "Porcentaje",
+                      "segundoApellido": null,
+                      "fechaNacimiento": "2000-02-02T06:00:00.000+00:00",
+                      "clavePoliza": "%s"
+                    },
+                    "porcentaje": 150
+                  },
+                  {
+                    "id": {
+                      "nombres": "Otro",
+                      "primerApellido": "Poliza",
+                      "segundoApellido": null,
+                      "fechaNacimiento": "1995-05-10T06:00:00.000+00:00",
+                      "clavePoliza": "%s"
+                    },
+                    "porcentaje": 100
+                  }
+                ]
+                """.formatted(CLAVE, CLAVE, OTRA_CLAVE);
+
+        mockServer.expect(requestTo(URL_BASE + "/beneficiarios"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        List<Beneficiario> resultado = adapter.listarPorPoliza(UUID.fromString(CLAVE));
+
+        assertEquals(1, resultado.size());
+        assertEquals("Mario", resultado.get(0).getNombres());
+        assertEquals(60, resultado.get(0).getPorcentaje());
+        mockServer.verify();
+    }
+
+    @Test
+    void debeGuardarBeneficiarioMediantePost() {
+        String json = """
+                {
+                  "id": {
+                    "nombres": "Ana",
+                    "primerApellido": "Gomez",
+                    "segundoApellido": null,
+                    "fechaNacimiento": "1998-04-15T06:00:00.000+00:00",
+                    "clavePoliza": "%s"
+                  },
+                  "porcentaje": 40
+                }
+                """.formatted(CLAVE);
+
+        mockServer.expect(requestTo(
+                        URL_BASE + "/beneficiario/1998-04-15/" + CLAVE
+                                + "/40/Ana/Gomez"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        Beneficiario nuevo = new Beneficiario(
+                "Ana",
+                "Gomez",
+                null,
+                LocalDate.of(1998, 4, 15),
+                UUID.fromString(CLAVE),
+                40);
+
+        Beneficiario guardado = adapter.guardar(nuevo);
+
+        assertEquals("Ana", guardado.getNombres());
+        assertEquals(40, guardado.getPorcentaje());
         mockServer.verify();
     }
 }

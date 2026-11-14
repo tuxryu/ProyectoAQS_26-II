@@ -4,7 +4,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.exception.MontoInvalidoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
