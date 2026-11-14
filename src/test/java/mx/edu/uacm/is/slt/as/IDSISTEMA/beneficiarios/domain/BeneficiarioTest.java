@@ -7,7 +7,6 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.exception.Beneficiar
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.exception.PorcentajeInvalidoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.BeneficiarioId;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
