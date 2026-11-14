@@ -1,8 +1,13 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.out.rest;
+
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.out.rest.dto.BeneficiarioIdRemotoDto;
@@ -14,9 +19,24 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.FechasSistemaDueno;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.TraductorExcepcionesSistemaDueno;
 
+/**
+ * Adaptador REST de salida hacia el Sistema Dueno para consultas, listado por
+ * poliza (GET /beneficiarios) y alta de beneficiarios (POST).
+ */
 @Component
 public class BeneficiarioSistemaDuenoAdapter
         implements BeneficiarioSistemaDuenoPort {
+
+    private static final Logger LOG
+            = LoggerFactory.getLogger(BeneficiarioSistemaDuenoAdapter.class);
+
+    private static final String RUTA_POST_CON_SEGUNDO_APELLIDO
+            = "/beneficiario/{fecha}/{clavePoliza}/{porcentaje}/{nombres}"
+                    + "/{primerApellido}/{segundoApellido}";
+
+    private static final String RUTA_POST_SIN_SEGUNDO_APELLIDO
+            = "/beneficiario/{fecha}/{clavePoliza}/{porcentaje}/{nombres}"
+                    + "/{primerApellido}";
 
     private final RestClient restClient;
 
@@ -67,6 +87,83 @@ public class BeneficiarioSistemaDuenoAdapter
         }
     }
 
+    @Override
+    public List<Beneficiario> listarPorPoliza(UUID clavePoliza) {
+        Objects.requireNonNull(clavePoliza, "La clave de poliza es obligatoria.");
+        BeneficiarioRemotoDto[] filas = TraductorExcepcionesSistemaDueno.ejecutar(
+                () -> restClient.get()
+                        .uri("/beneficiarios")
+                        .retrieve()
+                        .body(BeneficiarioRemotoDto[].class));
+
+        if (filas == null || filas.length == 0) {
+            return List.of();
+        }
+
+        List<Beneficiario> resultado = new ArrayList<>();
+        for (BeneficiarioRemotoDto fila : filas) {
+            if (fila == null || fila.id() == null) {
+                continue;
+            }
+            try {
+                Beneficiario beneficiario = convertirADominio(fila);
+                if (clavePoliza.equals(beneficiario.getClavePoliza())) {
+                    resultado.add(beneficiario);
+                }
+            } catch (IllegalArgumentException | NullPointerException ex) {
+                LOG.warn(
+                        "Se omite un beneficiario invalido del Sistema Dueno ({}): {}",
+                        ex.getMessage(),
+                        fila);
+            }
+        }
+        return List.copyOf(resultado);
+    }
+
+    @Override
+    public Beneficiario guardar(Beneficiario beneficiario) {
+        Objects.requireNonNull(beneficiario, "El beneficiario es obligatorio.");
+        final String fechaRuta = FechasSistemaDueno.formatearParaRuta(
+                beneficiario.getFechaNacimiento());
+        validarSegmento(fechaRuta);
+        final UUID clavePoliza = Objects.requireNonNull(
+                beneficiario.getClavePoliza(), "La clave de poliza es obligatoria.");
+        String nombres = beneficiario.getNombres();
+        String primerApellido = beneficiario.getPrimerApellido();
+        String segundoApellido = beneficiario.getSegundoApellido();
+        validarSegmento(nombres);
+        validarSegmento(primerApellido);
+
+        boolean tieneSegundoApellido
+                = segundoApellido != null && !segundoApellido.trim().isEmpty();
+        if (tieneSegundoApellido) {
+            validarSegmento(segundoApellido);
+        }
+
+        BeneficiarioRemotoDto respuesta = TraductorExcepcionesSistemaDueno.ejecutar(
+                () -> enviarPostRemoto(
+                        fechaRuta,
+                        clavePoliza,
+                        beneficiario.getPorcentaje(),
+                        nombres,
+                        primerApellido,
+                        segundoApellido,
+                        tieneSegundoApellido));
+
+        if (respuesta == null || respuesta.id() == null) {
+            throw new SistemaDuenoRechazoException(
+                    "El Sistema Dueno rechazo el registro del beneficiario (200 vacio).");
+        }
+
+        try {
+            return convertirADominio(respuesta);
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new SistemaDuenoRechazoException(
+                    "El Sistema Dueno devolvio datos invalidos al guardar el beneficiario.",
+                    ex);
+        }
+    }
+
     private BeneficiarioRemotoDto consultarRemoto(
             LocalDate fechaNacimiento,
             UUID clavePoliza,
@@ -92,6 +189,39 @@ public class BeneficiarioSistemaDuenoAdapter
                         "/beneficiario/{fecha}/{clavePoliza}/{nombres}/{primerApellido}",
                         FechasSistemaDueno.formatearParaRuta(fechaNacimiento),
                         clavePoliza,
+                        nombres,
+                        primerApellido)
+                .retrieve()
+                .body(BeneficiarioRemotoDto.class);
+    }
+
+    private BeneficiarioRemotoDto enviarPostRemoto(
+            String fechaRuta,
+            UUID clavePoliza,
+            int porcentaje,
+            String nombres,
+            String primerApellido,
+            String segundoApellido,
+            boolean tieneSegundoApellido) {
+        if (tieneSegundoApellido) {
+            return restClient.post()
+                    .uri(
+                            RUTA_POST_CON_SEGUNDO_APELLIDO,
+                            fechaRuta,
+                            clavePoliza,
+                            porcentaje,
+                            nombres,
+                            primerApellido,
+                            segundoApellido)
+                    .retrieve()
+                    .body(BeneficiarioRemotoDto.class);
+        }
+        return restClient.post()
+                .uri(
+                        RUTA_POST_SIN_SEGUNDO_APELLIDO,
+                        fechaRuta,
+                        clavePoliza,
+                        porcentaje,
                         nombres,
                         primerApellido)
                 .retrieve()
