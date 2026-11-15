@@ -4,23 +4,31 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.application.port.in.ActualizarClienteUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.application.port.in.ConsultaClienteUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.application.port.in.FiltroCliente;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.application.port.in.RegistrarClienteUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.application.port.out.ClienteRemotoPort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.exception.ClienteNoEncontradoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.ConflictoDatosException;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 
 /**
- * Caso de uso de consultas de clientes. Delega la lectura al Sistema Dueño a
- * través de {@link ClienteRemotoPort} y página en memoria, ordenando por CURP
- * para que las páginas sean estables entre llamadas.
+ * Servicio de aplicacion del modulo de clientes: implementa las consultas GET
+ * (individual por CURP y listados paginados) y las operaciones de escritura
+ * (alta validando no duplicidad 409, actualizacion validando existencia 404 y
+ * relectura posterior con GET).
  */
 @Service
-public class ClienteService implements ConsultaClienteUseCase {
+public class ClienteService
+        implements ConsultaClienteUseCase,
+                RegistrarClienteUseCasePort,
+                ActualizarClienteUseCasePort {
 
-    /** Tamaño máximo de página permitido. */
+    /** Tamano maximo de pagina permitido. */
     public static final int TAMANO_MAXIMO = 100;
 
     private static final Comparator<Cliente> POR_CURP
@@ -52,6 +60,49 @@ public class ClienteService implements ConsultaClienteUseCase {
                 .sorted(POR_CURP)
                 .toList();
         return Pagina.de(ordenados, pagina, tamano);
+    }
+
+    @Override
+    public Cliente registrarCliente(Cliente cliente) {
+        if (cliente == null) {
+            throw new SolicitudInvalidaException(
+                    "Los datos del cliente son obligatorios.");
+        }
+        String curp = cliente.getCurp();
+        if (clienteRemotoPort.buscarPorCurp(curp).isPresent()) {
+            throw new ConflictoDatosException(
+                    "El cliente con CURP " + curp + " ya se encuentra registrado.");
+        }
+        clienteRemotoPort.guardar(cliente);
+        Cliente releido = clienteRemotoPort.buscarPorCurp(curp)
+                .orElseThrow(() -> new SistemaDuenoRechazoException(
+                        "El Sistema Dueno no persistio el cliente tras el registro."));
+        if (!releido.equals(cliente)) {
+            throw new SistemaDuenoRechazoException(
+                    "Los datos releidos del cliente no coinciden con los enviados.");
+        }
+        return releido;
+    }
+
+    @Override
+    public Cliente actualizarCliente(Cliente cliente) {
+        if (cliente == null) {
+            throw new SolicitudInvalidaException(
+                    "Los datos del cliente son obligatorios.");
+        }
+        String curp = cliente.getCurp();
+        if (clienteRemotoPort.buscarPorCurp(curp).isEmpty()) {
+            throw new ClienteNoEncontradoException(curp);
+        }
+        clienteRemotoPort.actualizar(cliente);
+        Cliente releido = clienteRemotoPort.buscarPorCurp(curp)
+                .orElseThrow(() -> new SistemaDuenoRechazoException(
+                        "El Sistema Dueno no persistio los cambios del cliente."));
+        if (!releido.equals(cliente)) {
+            throw new SistemaDuenoRechazoException(
+                    "Los datos releidos del cliente no coinciden con los actualizados.");
+        }
+        return releido;
     }
 
     private List<Cliente> buscar(FiltroCliente filtro) {

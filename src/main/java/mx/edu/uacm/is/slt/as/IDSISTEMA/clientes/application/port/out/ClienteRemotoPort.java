@@ -5,9 +5,8 @@ import java.util.Optional;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
 
 /**
- * Puerto de salida hacia el Sistema Dueño para las lecturas de clientes.
- * Las operaciones de escritura (guardar, actualizar, eliminar) se agregarán con
- * sus casos de uso.
+ * Puerto de salida hacia el Sistema Dueno para las operaciones de lectura y
+ * escritura de clientes.
  */
 public interface ClienteRemotoPort {
 
@@ -17,4 +16,8 @@ public interface ClienteRemotoPort {
 
     List<Cliente> buscarPorNombre(
             String nombres, String primerApellido, String segundoApellido);
+
+    Cliente guardar(Cliente cliente);
+
+    Cliente actualizar(Cliente cliente);
 }
