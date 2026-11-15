@@ -24,7 +24,7 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
 @RequestMapping("/polizas")
 public class PolizaController {
 /**
- *  O GET   /polizas
+ *  O GET   /polizas.
  *  0 GET   /polizas/{clave}
  *  X GET   /polizas/{curp}
  *  X GET   /polizas/{tipo}
@@ -99,7 +99,8 @@ public class PolizaController {
      * @param tamano tamano de pagina (por defecto 20)
      * @return pagina de polizas
      */
-    @GetMapping({"/c/{nombres}/{primerApellido}", "/c/{nombres}/{primerApellido}/{segundoApellido}"})
+    @GetMapping({"/c/{nombres}/{primerApellido}",
+            "/c/{nombres}/{primerApellido}/{segundoApellido}"})
     public Pagina<PolizaRespuestaDto> buscarPorCliente(
             @PathVariable String nombres,
             @PathVariable String primerApellido,
@@ -113,7 +114,7 @@ public class PolizaController {
     }
 
     /**
-     * Lista las polizas que tienen un beneficiario con el nombre indicado
+     * Lista las polizas que tienen un beneficiario con el nombre indicado.
      * (GET /polizas/b/{nombres}/{primerApellido}[/{segundoApellido}]).
      *
      * @param nombres nombres del beneficiario
@@ -123,7 +124,8 @@ public class PolizaController {
      * @param tamano tamano de pagina (por defecto 20)
      * @return pagina de polizas
      */
-    @GetMapping({"/b/{nombres}/{primerApellido}", "/b/{nombres}/{primerApellido}/{segundoApellido}"})
+    @GetMapping({"/b/{nombres}/{primerApellido}",
+            "/b/{nombres}/{primerApellido}/{segundoApellido}"})
     public Pagina<PolizaRespuestaDto> buscarPorBeneficiario(
             @PathVariable String nombres,
             @PathVariable String primerApellido,

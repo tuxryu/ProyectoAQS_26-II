@@ -1,18 +1,17 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.service;
 
+import java.util.Objects;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.ModificacionPolizaUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.out.ClienteServicioPort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.out.PolizaRemotaPort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
-import org.springframework.stereotype.Service;
-
-import java.util.Objects;
-import java.util.UUID;
 
 @Service
-public class ModificacionPolizaService  implements ModificacionPolizaUseCasePort {
+public class ModificacionPolizaService implements ModificacionPolizaUseCasePort {
     private final PolizaRemotaPort polizaRemotaPort;
     private final ClienteServicioPort clienteServicioPort;
 
@@ -24,6 +23,7 @@ public class ModificacionPolizaService  implements ModificacionPolizaUseCasePort
         this.clienteServicioPort = Objects.requireNonNull(
                 clienteServicioPort, "El puerto ClienteServicioPort es obligatorio.");
     }
+
     @Override
     public Poliza modificarPoliza(UUID clave, Poliza polizaConCambios) {
         if (clave == null) {
@@ -39,5 +39,5 @@ public class ModificacionPolizaService  implements ModificacionPolizaUseCasePort
         }
         return polizaRemotaPort.actualizar(clave, polizaConCambios);
     }
-    
+
 }
