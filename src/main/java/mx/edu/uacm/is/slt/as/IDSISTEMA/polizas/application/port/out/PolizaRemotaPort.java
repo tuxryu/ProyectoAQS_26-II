@@ -31,8 +31,9 @@ public interface PolizaRemotaPort {
     /**
      * Actualiza una poliza existente en el Sistema Dueno.
      *
-     * @param clave  clave de la poliza a actualizar
+     * @param clave clave de la poliza a actualizar
      * @param poliza nuevos datos de la poliza
+     * @return poliza actualizada
      */
     Poliza actualizar(UUID clave, Poliza poliza);
 

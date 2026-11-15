@@ -31,7 +31,9 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 public class PolizaEscrituraController {
 
     private final CrearPolizaUseCasePort crearPolizaUseCase;
+
     private final ModificacionPolizaUseCasePort modificacionPolizaUseCase;
+
     private final CancelarPolizaUseCasePort cancelarPolizaUseCase;
 
     public PolizaEscrituraController(

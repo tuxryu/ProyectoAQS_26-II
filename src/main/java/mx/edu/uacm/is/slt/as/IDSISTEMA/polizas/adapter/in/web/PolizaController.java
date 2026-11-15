@@ -23,20 +23,17 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
 @RestController
 @RequestMapping("/polizas")
 public class PolizaController {
-/**
- *  O GET   /polizas
- *  0 GET   /polizas/{clave}
- *  X GET   /polizas/{curp}
- *  X GET   /polizas/{tipo}
- *  - GET   /polizas/c/{nombres}/{primera_pellido}/{segundo_apellido = null}
- *  - GET   /polizas/b/{nombres}/{primera_pellido}/{segundo_apellido = null}
- *  X GET   /polizas/b/{fecha_nacimiento}
- *  X POST  /poliza/{clave}/{tipo}/{monto}/{descripcion}/{curp_cliente}
- *  X PUT   /poliza/{clave}/{tipo}/{monto}/{descripcion}/{curp_cliente}
- *  X DELET /poliza/{clave}
- *
- *
- * **/
+
+    private static final String RUTA_BUSQUEDA_CLIENTE = "/c/{nombres}/{primerApellido}";
+
+    private static final String RUTA_BUSQUEDA_CLIENTE_COMPLETA
+            = "/c/{nombres}/{primerApellido}/{segundoApellido}";
+
+    private static final String RUTA_BUSQUEDA_BENEFICIARIO = "/b/{nombres}/{primerApellido}";
+
+    private static final String RUTA_BUSQUEDA_BENEFICIARIO_COMPLETA
+            = "/b/{nombres}/{primerApellido}/{segundoApellido}";
+
     private final ConsultaPolizaUseCase consultaPolizaUseCase;
 
     public PolizaController(ConsultaPolizaUseCase consultaPolizaUseCase) {
@@ -99,7 +96,7 @@ public class PolizaController {
      * @param tamano tamano de pagina (por defecto 20)
      * @return pagina de polizas
      */
-    @GetMapping({"/c/{nombres}/{primerApellido}", "/c/{nombres}/{primerApellido}/{segundoApellido}"})
+    @GetMapping({RUTA_BUSQUEDA_CLIENTE, RUTA_BUSQUEDA_CLIENTE_COMPLETA})
     public Pagina<PolizaRespuestaDto> buscarPorCliente(
             @PathVariable String nombres,
             @PathVariable String primerApellido,
@@ -123,7 +120,7 @@ public class PolizaController {
      * @param tamano tamano de pagina (por defecto 20)
      * @return pagina de polizas
      */
-    @GetMapping({"/b/{nombres}/{primerApellido}", "/b/{nombres}/{primerApellido}/{segundoApellido}"})
+    @GetMapping({RUTA_BUSQUEDA_BENEFICIARIO, RUTA_BUSQUEDA_BENEFICIARIO_COMPLETA})
     public Pagina<PolizaRespuestaDto> buscarPorBeneficiario(
             @PathVariable String nombres,
             @PathVariable String primerApellido,
@@ -135,7 +132,6 @@ public class PolizaController {
         Pagina<Poliza> resultado = consultaPolizaUseCase.consultar(filtro, pagina, tamano);
         return mapearPagina(resultado);
     }
-
 
     /**
      * Lista polizas con a lo mucho un filtro opcional (curp, tipo o

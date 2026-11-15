@@ -181,6 +181,7 @@ class PolizaServiceTest {
         public void eliminar(UUID clave) {
             ultimaOperacion = "eliminar:" + clave;
         }
+
         @Override
         public Optional<Poliza> buscarPorClave(UUID clave) {
             ultimaOperacion = "buscarPorClave";
