@@ -2,6 +2,7 @@ package mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.adapter.out.rest;
 
 import java.net.SocketTimeoutException;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.adapter.out.rest.dto.ClienteRemotoDto;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.FechasSistemaDueno;
@@ -320,5 +322,93 @@ class ClienteSistemaDuenoAdapterTest {
         assertThrows(
                 IllegalArgumentException.class,
                 () -> adapter.buscarPorCurp("BROE550101/DFABC00"));
+    }
+
+    @Test
+    void debeListarTodosLosClientesOmitiendoFilasCorruptas() {
+        String json = """
+                [
+                  {
+                    "curp": "broe550101hdfabc00",
+                    "nombres": "Roberto",
+                    "primerApellido": "Bolanios",
+                    "segundoApellido": null,
+                    "direccion": "Vecindad 8",
+                    "fechaNacimiento": "1920-01-01T06:36:36.000+00:00"
+                  },
+                  {
+                    "curp": "CURP_CORRUPTA",
+                    "nombres": "Registro",
+                    "primerApellido": "Invalido",
+                    "segundoApellido": null,
+                    "direccion": "Calle X",
+                    "fechaNacimiento": "1990-01-01T06:00:00.000+00:00"
+                  },
+                  {
+                    "curp": "T404900101HDFAAA01",
+                    "nombres": "Juan",
+                    "primerApellido": "Perez",
+                    "segundoApellido": "Lopez",
+                    "direccion": "Calle 10",
+                    "fechaNacimiento": "1990-01-01T06:00:00.000+00:00"
+                  }
+                ]
+                """;
+
+        mockServer.expect(requestTo(URL_BASE + "/clientes"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        List<Cliente> resultado = adapter.listarTodos();
+
+        assertEquals(2, resultado.size());
+        assertEquals("broe550101hdfabc00", resultado.get(0).getCurp());
+        assertEquals("T404900101HDFAAA01", resultado.get(1).getCurp());
+        assertEquals(LocalDate.of(1990, 1, 1), resultado.get(1).getFechaNacimiento());
+        mockServer.verify();
+    }
+
+    @Test
+    void debeDevolverListaVaciaCuandoGetClientesRespondeArregloVacio() {
+        mockServer.expect(requestTo(URL_BASE + "/clientes"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        List<Cliente> resultado = adapter.listarTodos();
+
+        assertTrue(resultado.isEmpty());
+        mockServer.verify();
+    }
+
+    @Test
+    void debeBuscarClientesPorNombreConYSinSegundoApellido() {
+        String json = """
+                [
+                  {
+                    "curp": "T404900101HDFAAA01",
+                    "nombres": "Juan",
+                    "primerApellido": "Perez",
+                    "segundoApellido": "Lopez",
+                    "direccion": "Calle 10",
+                    "fechaNacimiento": "1990-01-01T06:00:00.000+00:00"
+                  }
+                ]
+                """;
+
+        mockServer.expect(requestTo(URL_BASE + "/clientes/Juan/Perez"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        mockServer.expect(requestTo(URL_BASE + "/clientes/Juan/Perez/Lopez"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        List<Cliente> sinSegundo = adapter.buscarPorNombre("Juan", "Perez", null);
+        List<Cliente> conSegundo = adapter.buscarPorNombre("Juan", "Perez", "Lopez");
+
+        assertEquals(1, sinSegundo.size());
+        assertEquals(1, conSegundo.size());
+        assertEquals("T404900101HDFAAA01", conSegundo.get(0).getCurp());
+        mockServer.verify();
     }
 }
