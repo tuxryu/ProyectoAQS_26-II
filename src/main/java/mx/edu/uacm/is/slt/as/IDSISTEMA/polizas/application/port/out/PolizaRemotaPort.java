@@ -25,4 +25,21 @@ public interface PolizaRemotaPort {
 
     List<Poliza> buscarPorBeneficiario(
             String nombres, String primerApellido, String segundoApellido);
+
+    Poliza guardar(Poliza poliza);
+
+    /**
+     * Actualiza una poliza existente en el Sistema Dueno.
+     *
+     * @param clave  clave de la poliza a actualizar
+     * @param poliza nuevos datos de la poliza
+     */
+    Poliza actualizar(UUID clave, Poliza poliza);
+
+    /**
+     * Elimina una poliza por su clave en el Sistema Dueno.
+     *
+     * @param clave clave de la poliza a eliminar
+     */
+    void eliminar(UUID clave);
 }

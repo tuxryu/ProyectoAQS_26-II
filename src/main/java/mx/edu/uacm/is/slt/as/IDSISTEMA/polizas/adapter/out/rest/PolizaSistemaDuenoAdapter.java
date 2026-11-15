@@ -307,6 +307,7 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
      * @param poliza entidad de dominio a guardar
      * @return poliza registrada devuelta por el servidor
      */
+    @Override
     public Poliza guardar(Poliza poliza) {
         Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
         PolizaRemotaDto dto = convertirADto(poliza);
@@ -331,7 +332,8 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
      * @param clave clave UUID de la poliza a actualizar
      * @param poliza datos actualizados de la poliza
      */
-    public void actualizar(UUID clave, Poliza poliza) {
+    @Override
+    public Poliza actualizar(UUID clave, Poliza poliza) {
         Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
         Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
         PolizaRemotaDto dto = convertirADto(poliza);
@@ -342,6 +344,7 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
                 .body(dto)
                 .retrieve()
                 .toBodilessEntity());
+        return poliza;
     }
 
     /**
@@ -349,6 +352,7 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
      *
      * @param clave clave UUID de la poliza a eliminar
      */
+    @Override
     public void eliminar(UUID clave) {
         Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
         ejecutar(() -> restClient.delete()

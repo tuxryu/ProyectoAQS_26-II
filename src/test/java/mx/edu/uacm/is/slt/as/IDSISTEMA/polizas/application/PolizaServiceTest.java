@@ -166,6 +166,23 @@ class PolizaServiceTest {
                 new Poliza(CLAVE_B, (byte) 1, 1500000.0f, "Vida", "broe550101hdfabc00"));
 
         @Override
+        public Poliza guardar(Poliza poliza) {
+            ultimaOperacion = "guardar:" + poliza.getClave();
+            return poliza;
+        }
+
+        @Override
+        public Poliza actualizar(UUID clave, Poliza poliza) {
+            ultimaOperacion = "actualizar:" + clave;
+            return poliza;
+        }
+
+        @Override
+        public void eliminar(UUID clave) {
+            ultimaOperacion = "eliminar:" + clave;
+        }
+
+        @Override
         public Optional<Poliza> buscarPorClave(UUID clave) {
             ultimaOperacion = "buscarPorClave";
             return datos.stream()
