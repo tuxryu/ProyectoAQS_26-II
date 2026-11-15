@@ -10,12 +10,8 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
 
-/**
- * Caso de uso de modificacion de polizas.
- */
 @Service
 public class ModificacionPolizaService implements ModificacionPolizaUseCasePort {
-
     private final PolizaRemotaPort polizaRemotaPort;
     private final ClienteServicioPort clienteServicioPort;
 
@@ -43,4 +39,5 @@ public class ModificacionPolizaService implements ModificacionPolizaUseCasePort 
         }
         return polizaRemotaPort.actualizar(clave, polizaConCambios);
     }
+
 }

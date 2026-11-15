@@ -9,9 +9,6 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
 
-/**
- * Caso de uso de creacion (alta) de polizas.
- */
 @Service
 public class CrearPolizaService implements CrearPolizaUseCasePort {
 

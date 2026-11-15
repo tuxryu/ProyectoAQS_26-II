@@ -331,7 +331,6 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
      *
      * @param clave clave UUID de la poliza a actualizar
      * @param poliza datos actualizados de la poliza
-     * @return poliza actualizada
      */
     @Override
     public Poliza actualizar(UUID clave, Poliza poliza) {

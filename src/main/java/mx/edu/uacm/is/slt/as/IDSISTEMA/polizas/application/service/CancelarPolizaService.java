@@ -7,12 +7,13 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.CancelarPoliz
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.out.PolizaRemotaPort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
 
+
+
 /**
  * Caso de uso de cancelacion (eliminacion) de polizas.
  */
 @Service
 public class CancelarPolizaService implements CancelarPolizaUseCasePort {
-
     private final PolizaRemotaPort polizaRemotaPort;
 
     public CancelarPolizaService(PolizaRemotaPort polizaRemotaPort) {
