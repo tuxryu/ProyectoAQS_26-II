@@ -29,8 +29,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
- * Pruebas unitarias con MockRestServiceServer para las consultas GET de
- * PolizaSistemaDuenoAdapter. Los JSON replican respuestas reales del Sistema Dueno.
+ * Pruebas unitarias con MockRestServiceServer para las consultas GET y las
+ * operaciones de escritura (POST, PUT, DELETE) de PolizaSistemaDuenoAdapter.
  */
 class PolizaSistemaDuenoAdapterTest {
 
@@ -317,7 +317,7 @@ class PolizaSistemaDuenoAdapterTest {
     }
 
     @Test
-    void debeGuardarPolizaCorrectamenteMediantePost() {
+    void debeGuardarPolizaCorrectamenteMediantePostEnRutaDelSistemaDueno() {
         UUID clave = UUID.randomUUID();
         Poliza poliza = new Poliza(
                 clave, (byte) 1, 200000.0f, "Poliza Auto", "BROE550101HDFABC00");
@@ -325,28 +325,54 @@ class PolizaSistemaDuenoAdapterTest {
         String jsonRespuesta = "{\"clave\":\"" + clave + "\",\"tipo\":1,\"monto\":200000.0,"
                 + "\"descripcion\":\"Poliza Auto\",\"curpCliente\":\"BROE550101HDFABC00\"}";
 
-        mockServer.expect(requestTo(URL_BASE + "/polizas"))
+        String urlEsperada = URL_BASE + "/poliza/" + clave
+                + "/1/200000.0/Poliza%20Auto/BROE550101HDFABC00";
+
+        mockServer.expect(requestTo(urlEsperada))
                 .andExpect(method(HttpMethod.POST))
-                .andRespond(withStatus(HttpStatus.CREATED)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(jsonRespuesta));
+                .andRespond(withSuccess(jsonRespuesta, MediaType.APPLICATION_JSON));
 
         Poliza resultado = adapter.guardar(poliza);
         assertNotNull(resultado);
+        assertEquals(clave, resultado.getClave());
         mockServer.verify();
     }
 
     @Test
-    void debeActualizarPolizaCorrectamenteMediantePut() {
+    void debeLanzarRechazoCuandoPostEnRutaResponde200Vacio() {
+        UUID clave = UUID.randomUUID();
+        Poliza poliza = new Poliza(
+                clave, (byte) 1, 200000.0f, "Poliza Auto", "BROE550101HDFABC00");
+
+        String urlEsperada = URL_BASE + "/poliza/" + clave
+                + "/1/200000.0/Poliza%20Auto/BROE550101HDFABC00";
+
+        mockServer.expect(requestTo(urlEsperada))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+
+        assertThrows(SistemaDuenoRechazoException.class, () -> adapter.guardar(poliza));
+        mockServer.verify();
+    }
+
+    @Test
+    void debeActualizarPolizaCorrectamenteMediantePutEnRutaDelSistemaDueno() {
         UUID clave = UUID.randomUUID();
         Poliza poliza = new Poliza(
                 clave, (byte) 1, 250000.0f, "Poliza Editada", "BROE550101HDFABC00");
 
-        mockServer.expect(requestTo(URL_BASE + "/poliza/" + clave))
-                .andExpect(method(HttpMethod.PUT))
-                .andRespond(withSuccess());
+        String jsonRespuesta = "{\"clave\":\"" + clave + "\",\"tipo\":1,\"monto\":250000.0,"
+                + "\"descripcion\":\"Poliza Editada\",\"curpCliente\":\"BROE550101HDFABC00\"}";
 
-        assertDoesNotThrow(() -> adapter.actualizar(clave, poliza));
+        String urlEsperada = URL_BASE + "/poliza/" + clave
+                + "/1/250000.0/Poliza%20Editada/BROE550101HDFABC00";
+
+        mockServer.expect(requestTo(urlEsperada))
+                .andExpect(method(HttpMethod.PUT))
+                .andRespond(withSuccess(jsonRespuesta, MediaType.APPLICATION_JSON));
+
+        Poliza actualizada = adapter.actualizar(clave, poliza);
+        assertEquals(250000.0f, actualizada.getMonto());
         mockServer.verify();
     }
 
@@ -356,7 +382,7 @@ class PolizaSistemaDuenoAdapterTest {
 
         mockServer.expect(requestTo(URL_BASE + "/poliza/" + clave))
                 .andExpect(method(HttpMethod.DELETE))
-                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+                .andRespond(withStatus(HttpStatus.OK));
 
         assertDoesNotThrow(() -> adapter.eliminar(clave));
         mockServer.verify();

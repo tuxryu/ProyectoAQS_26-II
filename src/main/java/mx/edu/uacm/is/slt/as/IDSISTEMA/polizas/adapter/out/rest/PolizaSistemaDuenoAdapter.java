@@ -10,7 +10,6 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -23,20 +22,10 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 
 /**
- * Adaptador de salida REST hacia el Sistema Dueno para las consultas GET de
- * polizas (lectura por clave y listados con filtro). Implementa
+ * Adaptador de salida REST hacia el Sistema Dueno para las consultas GET y las
+ * operaciones de escritura (POST, PUT, DELETE) de polizas. Implementa
  * {@link PolizaRemotaPort}: cada fila JSON se valida como {@link PolizaRemotaDto}
  * y despues se convierte a la entidad de dominio {@link Poliza}.
- *
- * <p>Reglas aplicadas (hallazgos del Sistema Dueno):
- * <ul>
- *   <li>CURP y nombres se envian tal cual, sin normalizar mayusculas.</li>
- *   <li>Los segmentos de ruta se codifican; se rechazan / y \ antes de llamar.</li>
- *   <li>Lectura individual con 200 vacio: Optional.empty().</li>
- *   <li>Listas vacias []: lista vacia, no es error.</li>
- *   <li>Filas invalidas de otros equipos se omiten y se registran en log.</li>
- *   <li>HTTP 500: rechazo (502); 502/503/504, timeout o red: no disponible (503).</li>
- * </ul>
  */
 @Component
 public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
@@ -46,6 +35,9 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
     private static final int TIPO_MINIMO = 0;
 
     private static final int TIPO_MAXIMO = 2;
+
+    private static final String RUTA_ESCRITURA_POLIZA
+            = "/poliza/{clave}/{tipo}/{monto}/{descripcion}/{curpCliente}";
 
     private final RestClient restClient;
 
@@ -90,8 +82,7 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
     }
 
     /**
-     * Lista las polizas de un cliente por su CURP (GET /polizas/{curp}). La CURP
-     * se envia tal cual porque el servidor distingue mayusculas y minusculas.
+     * Lista las polizas de un cliente por su CURP (GET /polizas/{curp}).
      *
      * @param curp CURP del cliente titular
      * @return polizas validas del cliente; lista vacia si no hay resultados
@@ -302,49 +293,71 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
     }
 
     /**
-     * Registra una nueva poliza en el Sistema Dueno (POST /polizas).
+     * Registra una nueva poliza en el Sistema Dueno
+     * (POST /poliza/{clave}/{tipo}/{monto}/{descripcion}/{curpCliente}).
      *
      * @param poliza entidad de dominio a guardar
      * @return poliza registrada devuelta por el servidor
      */
     @Override
     public Poliza guardar(Poliza poliza) {
-        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
-        PolizaRemotaDto dto = convertirADto(poliza);
-
+        validarPolizaParaEscritura(poliza);
+        String descripcion = normalizarDescripcion(poliza.getDescripcion());
         Map<?, ?> respuesta = ejecutar(() -> restClient.post()
-                .uri("/polizas")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(dto)
+                .uri(
+                        RUTA_ESCRITURA_POLIZA,
+                        poliza.getClave(),
+                        poliza.getTipo(),
+                        poliza.getMonto(),
+                        descripcion,
+                        poliza.getCurpCliente())
                 .retrieve()
                 .body(Map.class));
-
         if (respuesta == null || respuesta.isEmpty()) {
             throw new SistemaDuenoRechazoException(
-                    "El servidor devolvio una respuesta vacia al crear la poliza.");
+                    "El Sistema Dueno rechazo el registro de la poliza (200 vacio).");
         }
-        return convertirADominio(convertirFila(respuesta));
+        try {
+            return convertirADominio(convertirFila(respuesta));
+        } catch (IllegalArgumentException ex) {
+            throw new SistemaDuenoRechazoException(
+                    "El Sistema Dueno devolvio una poliza inconsistente: " + ex.getMessage(), ex);
+        }
     }
 
     /**
-     * Actualiza una poliza existente en el Sistema Dueno (PUT /poliza/{clave}).
+     * Actualiza una poliza existente en el Sistema Dueno
+     * (PUT /poliza/{clave}/{tipo}/{monto}/{descripcion}/{curpCliente}).
      *
      * @param clave clave UUID de la poliza a actualizar
      * @param poliza datos actualizados de la poliza
+     * @return poliza actualizada devuelta por el servidor
      */
     @Override
     public Poliza actualizar(UUID clave, Poliza poliza) {
         Objects.requireNonNull(clave, "La clave de la poliza es obligatoria.");
-        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
-        PolizaRemotaDto dto = convertirADto(poliza);
-
-        ejecutar(() -> restClient.put()
-                .uri("/poliza/{clave}", clave)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(dto)
+        validarPolizaParaEscritura(poliza);
+        String descripcion = normalizarDescripcion(poliza.getDescripcion());
+        Map<?, ?> respuesta = ejecutar(() -> restClient.put()
+                .uri(
+                        RUTA_ESCRITURA_POLIZA,
+                        clave,
+                        poliza.getTipo(),
+                        poliza.getMonto(),
+                        descripcion,
+                        poliza.getCurpCliente())
                 .retrieve()
-                .toBodilessEntity());
-        return poliza;
+                .body(Map.class));
+        if (respuesta == null || respuesta.isEmpty()) {
+            throw new SistemaDuenoRechazoException(
+                    "El Sistema Dueno rechazo la actualizacion de la poliza (200 vacio).");
+        }
+        try {
+            return convertirADominio(convertirFila(respuesta));
+        } catch (IllegalArgumentException ex) {
+            throw new SistemaDuenoRechazoException(
+                    "El Sistema Dueno devolvio una poliza inconsistente: " + ex.getMessage(), ex);
+        }
     }
 
     /**
@@ -361,12 +374,19 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
                 .toBodilessEntity());
     }
 
-    private PolizaRemotaDto convertirADto(Poliza poliza) {
-        return new PolizaRemotaDto(
-                poliza.getClave(),
-                poliza.getTipo(),
-                BigDecimal.valueOf((double) poliza.getMonto()),
-                poliza.getDescripcion(),
-                poliza.getCurpCliente());
+    private void validarPolizaParaEscritura(Poliza poliza) {
+        Objects.requireNonNull(poliza, "La poliza no puede ser nula.");
+        Objects.requireNonNull(poliza.getClave(), "La clave de la poliza es obligatoria.");
+        validarSegmentoObligatorio(poliza.getCurpCliente(), "La CURP del cliente");
+        if (poliza.getDescripcion() != null) {
+            validarSinDiagonales(poliza.getDescripcion(), "La descripcion");
+        }
+    }
+
+    private String normalizarDescripcion(String descripcion) {
+        if (descripcion == null || descripcion.trim().isEmpty()) {
+            return "Sin descripcion";
+        }
+        return descripcion;
     }
 }
