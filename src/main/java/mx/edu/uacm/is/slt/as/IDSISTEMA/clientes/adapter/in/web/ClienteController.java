@@ -33,6 +33,8 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
 @RequestMapping("/clientes")
 public class ClienteController {
 
+    private static final int LONGITUD_CURP = 18;
+
     private final ConsultaClienteUseCase consultaClienteUseCase;
 
     private final RegistrarClienteUseCasePort registrarClienteUseCasePort;
@@ -123,6 +125,7 @@ public class ClienteController {
      */
     @GetMapping("/{curp}")
     public ClienteRespuestaDto consultarPorCurp(@PathVariable String curp) {
+        validarCurpEnRuta(curp);
         Cliente cliente = consultaClienteUseCase.consultarPorCurp(curp);
         return ClienteRespuestaDto.desde(cliente);
     }
@@ -147,6 +150,19 @@ public class ClienteController {
         FiltroCliente filtro = FiltroCliente.desde(nombres, primerApellido, segundoApellido);
         Pagina<Cliente> resultado = consultaClienteUseCase.consultar(filtro, pagina, tamano);
         return mapearPagina(resultado);
+    }
+
+    private void validarCurpEnRuta(String curp) {
+        if (curp != null) {
+            if (curp.contains("/") || curp.contains("\\")) {
+                throw new ReglaNegocioException(
+                        "La CURP no puede contener / ni \\.");
+            }
+            if (curp.length() > LONGITUD_CURP) {
+                throw new ReglaNegocioException(
+                        "La CURP excede los " + LONGITUD_CURP + " caracteres.");
+            }
+        }
     }
 
     private Cliente construirClienteValidado(
