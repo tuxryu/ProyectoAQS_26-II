@@ -5,7 +5,7 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
 
 /**
  * Puerto de entrada para las consultas de clientes (lectura por CURP y
- * listados con filtro y paginación).
+ * listados con filtro y paginacion).
  */
 public interface ConsultaClienteUseCase {
 
@@ -14,7 +14,6 @@ public interface ConsultaClienteUseCase {
      *
      * @param curp CURP del cliente
      * @return el cliente encontrado
-     *         si no existe
      */
     Cliente consultarPorCurp(String curp);
 
@@ -22,9 +21,9 @@ public interface ConsultaClienteUseCase {
      * Lista los clientes que cumplen el filtro, paginados y ordenados.
      *
      * @param filtro filtro de la consulta ({@link FiltroCliente.Todos} para no filtrar)
-     * @param pagina número de página, empezando en 0
-     * @param tamano elementos por página
-     * @return página de clientes; puede venir vacía
+     * @param pagina numero de pagina, empezando en 0
+     * @param tamano elementos por pagina
+     * @return pagina de clientes; puede venir vacia
      */
     Pagina<Cliente> consultar(FiltroCliente filtro, int pagina, int tamano);
 }
