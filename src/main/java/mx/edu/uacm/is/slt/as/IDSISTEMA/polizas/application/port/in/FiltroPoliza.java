@@ -13,6 +13,12 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalida
  */
 public sealed interface FiltroPoliza {
 
+    /** Longitud maxima permitida para una CURP. */
+    int LONGITUD_MAXIMA_CURP = 18;
+
+    /** Longitud maxima permitida para nombres y apellidos. */
+    int LONGITUD_MAXIMA_NOMBRE = 128;
+
     /**
      * Crea el filtro del listado general a partir de los parametros opcionales.
      *
@@ -50,16 +56,23 @@ public sealed interface FiltroPoliza {
         return new Todas();
     }
 
-    private static void exigirTexto(String valor, String campo) {
+    private static void exigirTexto(String valor, String campo, int longitudMaxima) {
         if (valor == null || valor.trim().isEmpty()) {
             throw new SolicitudInvalidaException(campo + " es obligatorio.");
         }
-        validarSinDiagonales(valor, campo);
+        validarLongitudYCaracteres(valor, campo, longitudMaxima);
     }
 
-    private static void validarSinDiagonales(String valor, String campo) {
-        if (valor != null && (valor.contains("/") || valor.contains("\\"))) {
-            throw new ReglaNegocioException(campo + " no puede contener / ni \\.");
+    private static void validarLongitudYCaracteres(
+            String valor, String campo, int longitudMaxima) {
+        if (valor != null) {
+            if (valor.length() > longitudMaxima) {
+                throw new ReglaNegocioException(
+                        campo + " excede los " + longitudMaxima + " caracteres.");
+            }
+            if (valor.contains("/") || valor.contains("\\")) {
+                throw new ReglaNegocioException(campo + " no puede contener / ni \\.");
+            }
         }
     }
 
@@ -83,7 +96,7 @@ public sealed interface FiltroPoliza {
          *         Sistema Dueno la confundiria con un tipo de poliza
          */
         public PorCurp {
-            exigirTexto(curp, "La CURP");
+            exigirTexto(curp, "La CURP", LONGITUD_MAXIMA_CURP);
             if (curp.trim().chars().allMatch(Character::isDigit)) {
                 throw new ReglaNegocioException(
                         "La CURP no puede ser solo numerica: " + curp + ".");
@@ -142,9 +155,15 @@ public sealed interface FiltroPoliza {
          * Valida nombres y apellidos.
          */
         public PorCliente {
-            exigirTexto(nombres, "El parametro nombres");
-            exigirTexto(primerApellido, "El parametro primerApellido");
-            validarSinDiagonales(segundoApellido, "El parametro segundoApellido");
+            exigirTexto(nombres, "El parametro nombres", LONGITUD_MAXIMA_NOMBRE);
+            exigirTexto(
+                    primerApellido,
+                    "El parametro primerApellido",
+                    LONGITUD_MAXIMA_NOMBRE);
+            validarLongitudYCaracteres(
+                    segundoApellido,
+                    "El parametro segundoApellido",
+                    LONGITUD_MAXIMA_NOMBRE);
         }
     }
 
@@ -162,9 +181,15 @@ public sealed interface FiltroPoliza {
          * Valida nombres y apellidos.
          */
         public PorBeneficiario {
-            exigirTexto(nombres, "El parametro nombres");
-            exigirTexto(primerApellido, "El parametro primerApellido");
-            validarSinDiagonales(segundoApellido, "El parametro segundoApellido");
+            exigirTexto(nombres, "El parametro nombres", LONGITUD_MAXIMA_NOMBRE);
+            exigirTexto(
+                    primerApellido,
+                    "El parametro primerApellido",
+                    LONGITUD_MAXIMA_NOMBRE);
+            validarLongitudYCaracteres(
+                    segundoApellido,
+                    "El parametro segundoApellido",
+                    LONGITUD_MAXIMA_NOMBRE);
         }
     }
 }

@@ -24,8 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Pruebas de integracion WebMvc (@WebMvcTest) para {@link BeneficiarioController}:
- * verifica los codigos HTTP 201, 200 (listado y consulta individual), 404, 409
- * y 422 junto con GlobalExceptionHandler.
+ * verifica los codigos HTTP 201, 200 (listado general, listado por poliza y
+ * consulta individual), 404, 409 y 422 junto con GlobalExceptionHandler.
  */
 @WebMvcTest(BeneficiarioController.class)
 class BeneficiarioControllerTest {
@@ -77,10 +77,17 @@ class BeneficiarioControllerTest {
     }
 
     @Test
-    void debeResponder200ConListadoYConsultaIndividualDeBeneficiarios() throws Exception {
+    void debeResponder200ConListadoGeneralPorPolizaYConsultaIndividual() throws Exception {
+        when(consultarBeneficiarioUseCasePort.listarTodos())
+                .thenReturn(List.of(crearBeneficiarioMuestra()));
         when(consultarBeneficiarioUseCasePort.consultarPorPoliza(
                 CLAVE_EXISTENTE.toString()))
                 .thenReturn(List.of(crearBeneficiarioMuestra()));
+
+        mockMvc.perform(get("/beneficiarios"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].nombres").value("Mario"));
 
         mockMvc.perform(get("/polizas/{clave}/beneficiarios", CLAVE_EXISTENTE))
                 .andExpect(status().isOk())

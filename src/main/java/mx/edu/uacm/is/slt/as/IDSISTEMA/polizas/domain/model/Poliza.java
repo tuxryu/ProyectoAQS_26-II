@@ -6,20 +6,31 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.exception.MontoInvalidoException;
 
+/**
+ * Entidad de dominio que representa una poliza de seguro.
+ */
 @Entity
 public class Poliza {
 
     private static final byte TIPO_MINIMO = 0;
+
     private static final byte TIPO_MAXIMO = 2;
 
-    @Id
-    private UUID clave; // Identificador único de la póliza (Integer)
-    private byte tipo;
-    private float monto; // Cobertura financiera
-    private String descripcion; // Detalle de la cobertura
-    private String curpCliente; // FK lógica al Cliente
+    private static final int LONGITUD_MAXIMA_DESCRIPCION = 512;
 
-    // Constructor
+    private static final int LONGITUD_MAXIMA_CURP = 18;
+
+    @Id
+    private UUID clave;
+
+    private byte tipo;
+
+    private float monto;
+
+    private String descripcion;
+
+    private String curpCliente;
+
     public Poliza() {
     }
 
@@ -51,10 +62,16 @@ public class Poliza {
     }
 
     private void validarDescripcion(String valorDescripcion) {
-        if (valorDescripcion != null
-                && (valorDescripcion.contains("/") || valorDescripcion.contains("\\"))) {
-            throw new IllegalArgumentException(
-                    "La descripcion no puede contener diagonales.");
+        if (valorDescripcion != null) {
+            if (valorDescripcion.length() > LONGITUD_MAXIMA_DESCRIPCION) {
+                throw new IllegalArgumentException(
+                        "La descripcion excede los "
+                                + LONGITUD_MAXIMA_DESCRIPCION + " caracteres.");
+            }
+            if (valorDescripcion.contains("/") || valorDescripcion.contains("\\")) {
+                throw new IllegalArgumentException(
+                        "La descripcion no puede contener diagonales.");
+            }
         }
     }
 
@@ -62,6 +79,11 @@ public class Poliza {
         if (valorCurp == null || valorCurp.trim().isEmpty()) {
             throw new IllegalArgumentException(
                     "El CURP del cliente titular es obligatorio.");
+        }
+        if (valorCurp.length() > LONGITUD_MAXIMA_CURP) {
+            throw new IllegalArgumentException(
+                    "El CURP del cliente excede los "
+                            + LONGITUD_MAXIMA_CURP + " caracteres.");
         }
         if (valorCurp.contains("/") || valorCurp.contains("\\")) {
             throw new IllegalArgumentException(
