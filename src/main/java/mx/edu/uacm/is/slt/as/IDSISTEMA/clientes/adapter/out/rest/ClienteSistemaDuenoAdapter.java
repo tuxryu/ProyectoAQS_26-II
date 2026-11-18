@@ -131,14 +131,8 @@ public class ClienteSistemaDuenoAdapter {
 
     private ClienteRemotoDto enviarEscritura(
             String curp, ClienteRemotoDto cliente, boolean usarPut) {
-        validarSegmentoObligatorio(curp, "La CURP");
-        validarSegmentoObligatorio(cliente.getDireccion(), "La direccion");
-        validarSegmentoObligatorio(cliente.getNombres(), "El nombre");
-        validarSegmentoObligatorio(cliente.getPrimerApellido(), "El primer apellido");
+        validarCamposDeEscritura(curp, cliente);
         String segundoApellido = cliente.getSegundoApellido();
-        if (segundoApellido != null) {
-            validarSinDiagonales(segundoApellido, "El segundo apellido");
-        }
         LocalDate fechaLocal = cliente.obtenerFechaNacimientoLocal();
         String fechaRuta = FechasSistemaDueno.formatearParaRuta(fechaLocal);
 
@@ -153,38 +147,52 @@ public class ClienteSistemaDuenoAdapter {
         return respuesta;
     }
 
+    private void validarCamposDeEscritura(String curp, ClienteRemotoDto cliente) {
+        validarSegmentoObligatorio(curp, "La CURP");
+        validarSegmentoObligatorio(cliente.getDireccion(), "La direccion");
+        validarSegmentoObligatorio(cliente.getNombres(), "El nombre");
+        validarSegmentoObligatorio(cliente.getPrimerApellido(), "El primer apellido");
+        if (cliente.getSegundoApellido() != null) {
+            validarSinDiagonales(cliente.getSegundoApellido(), "El segundo apellido");
+        }
+    }
+
     private ClienteRemotoDto ejecutarPeticionEscritura(
             String curp,
             ClienteRemotoDto cliente,
             String fechaRuta,
             String segundoApellido,
             boolean usarPut) {
-        if (segundoApellido != null) {
-            if (usarPut) {
-                return restClient.put()
-                        .uri(
-                                RUTA_CON_SEGUNDO_APELLIDO,
-                                curp,
-                                cliente.getDireccion(),
-                                fechaRuta,
-                                cliente.getNombres(),
-                                cliente.getPrimerApellido(),
-                                segundoApellido)
-                        .retrieve()
-                        .body(ClienteRemotoDto.class);
-            }
-            return restClient.post()
-                    .uri(
-                            RUTA_CON_SEGUNDO_APELLIDO,
-                            curp,
-                            cliente.getDireccion(),
-                            fechaRuta,
-                            cliente.getNombres(),
-                            cliente.getPrimerApellido(),
-                            segundoApellido)
-                    .retrieve()
-                    .body(ClienteRemotoDto.class);
+        if (segundoApellido == null) {
+            return enviarSinSegundoApellido(curp, cliente, fechaRuta);
         }
+        return enviarConSegundoApellido(
+                curp, cliente, fechaRuta, segundoApellido, usarPut);
+    }
+
+    private ClienteRemotoDto enviarConSegundoApellido(
+            String curp,
+            ClienteRemotoDto cliente,
+            String fechaRuta,
+            String segundoApellido,
+            boolean usarPut) {
+        RestClient.RequestBodyUriSpec peticion
+                = usarPut ? restClient.put() : restClient.post();
+        return peticion
+                .uri(
+                        RUTA_CON_SEGUNDO_APELLIDO,
+                        curp,
+                        cliente.getDireccion(),
+                        fechaRuta,
+                        cliente.getNombres(),
+                        cliente.getPrimerApellido(),
+                        segundoApellido)
+                .retrieve()
+                .body(ClienteRemotoDto.class);
+    }
+
+    private ClienteRemotoDto enviarSinSegundoApellido(
+            String curp, ClienteRemotoDto cliente, String fechaRuta) {
         return restClient.post()
                 .uri(
                         RUTA_SIN_SEGUNDO_APELLIDO,
@@ -214,16 +222,21 @@ public class ClienteSistemaDuenoAdapter {
         }
         List<Cliente> clientes = new ArrayList<>(respuesta.length);
         for (ClienteRemotoDto dto : Arrays.asList(respuesta)) {
-            if (dto != null && !esRespuestaVacia(dto)) {
-                try {
-                    clientes.add(convertirADominio(dto));
-                } catch (RuntimeException ex) {
-                    LOG.warn("Se omite un cliente invalido del Sistema Dueno: {}",
-                            ex.getMessage());
-                }
-            }
+            agregarSiEsValido(clientes, dto);
         }
         return List.copyOf(clientes);
+    }
+
+    private void agregarSiEsValido(List<Cliente> clientes, ClienteRemotoDto dto) {
+        if (dto == null || esRespuestaVacia(dto)) {
+            return;
+        }
+        try {
+            clientes.add(convertirADominio(dto));
+        } catch (RuntimeException ex) {
+            LOG.warn("Se omite un cliente invalido del Sistema Dueno: {}",
+                    ex.getMessage());
+        }
     }
 
     private Cliente convertirADominio(ClienteRemotoDto dto) {
