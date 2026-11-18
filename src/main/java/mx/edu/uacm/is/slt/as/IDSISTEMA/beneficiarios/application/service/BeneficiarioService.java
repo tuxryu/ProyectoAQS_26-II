@@ -22,9 +22,9 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
 
 /**
  * Servicio de aplicacion para el modulo de beneficiarios: implementa la
- * consulta GET (individual y listado por poliza) y el alta vinculada validando
- * existencia de poliza (404), duplicidad (409), suma de porcentajes menor o
- * igual a 100% (422) y relectura posterior a la escritura.
+ * consulta GET (general, individual y listado por poliza) y el alta vinculada
+ * validando existencia de poliza (404), duplicidad (409), suma de porcentajes
+ * menor o igual a 100% (422) y relectura posterior a la escritura.
  */
 @Service
 public class BeneficiarioService
@@ -163,6 +163,11 @@ public class BeneficiarioService
                 .orElseThrow(() -> new RecursoNoEncontradoException(
                         "No se encontro el beneficiario solicitado en la poliza "
                         + clavePoliza + "."));
+    }
+
+    @Override
+    public List<Beneficiario> listarTodos() {
+        return beneficiarioSistemaDuenoPort.listarTodos();
     }
 
     @Override

@@ -30,26 +30,34 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final char A_ACENTO = (char) 0xE1;
+
+    private static final char O_ACENTO = (char) 0xF3;
+
+    private static final char N_TILDE = (char) 0xF1;
+
     private static final String MENSAJE_400
-            = "La solicitud contiene datos inv\u00e1lidos.";
+            = "La solicitud contiene datos inv" + A_ACENTO + "lidos.";
 
     private static final String MENSAJE_404
-            = "No se encontr\u00f3 el recurso solicitado.";
+            = "No se encontr" + O_ACENTO + " el recurso solicitado.";
 
     private static final String MENSAJE_409
-            = "La operaci\u00f3n entra en conflicto con los datos existentes.";
+            = "La operaci" + O_ACENTO + "n entra en conflicto con los datos existentes.";
 
     private static final String MENSAJE_422
-            = "Los datos enviados no cumplen las reglas de validaci\u00f3n.";
+            = "Los datos enviados no cumplen las reglas de validaci" + O_ACENTO + "n.";
 
     private static final String MENSAJE_500
-            = "Ocurri\u00f3 un error interno al procesar la solicitud.";
+            = "Ocurri" + O_ACENTO + " un error interno al procesar la solicitud.";
 
     private static final String MENSAJE_502
-            = "El Sistema Due\u00f1o rechaz\u00f3 la operaci\u00f3n.";
+            = "El Sistema Due" + N_TILDE + "o rechaz"
+            + O_ACENTO + " la operaci" + O_ACENTO + "n.";
 
     private static final String MENSAJE_503
-            = "El Sistema Due\u00f1o no est\u00e1 disponible temporalmente.";
+            = "El Sistema Due" + N_TILDE + "o no est"
+            + A_ACENTO + " disponible temporalmente.";
 
     private ResponseEntity<ErrorResponse> crearRespuesta(
             HttpStatus status,
@@ -88,14 +96,21 @@ public class GlobalExceptionHandler {
     }
 
     private boolean contieneInformacionInterna(String texto) {
+        return contieneTrazaOPaquete(texto) || contieneRutaOUrlInterna(texto);
+    }
+
+    private boolean contieneTrazaOPaquete(String texto) {
         return texto.contains("\n")
                 || texto.contains("\r")
                 || texto.contains("\tat ")
                 || texto.contains("Exception")
                 || texto.contains("mx.edu.uacm")
                 || texto.contains("org.springframework")
-                || texto.contains("java.lang")
-                || texto.contains("nachintoch.mx")
+                || texto.contains("java.lang");
+    }
+
+    private boolean contieneRutaOUrlInterna(String texto) {
+        return texto.contains("nachintoch.mx")
                 || texto.contains("http://")
                 || texto.contains("https://")
                 || texto.contains("C:\\")

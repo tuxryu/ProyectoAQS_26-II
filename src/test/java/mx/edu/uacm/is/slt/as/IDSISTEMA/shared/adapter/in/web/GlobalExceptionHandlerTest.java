@@ -32,6 +32,8 @@ import static org.mockito.Mockito.when;
  */
 class GlobalExceptionHandlerTest {
 
+    private static final char O_ACENTO = (char) 0xF3;
+
     private GlobalExceptionHandler handler;
     private HttpServletRequest request;
 
@@ -165,7 +167,9 @@ class GlobalExceptionHandlerTest {
         assertNotNull(error.timestamp());
         assertEquals(404, error.status());
         assertEquals("Not Found", error.error());
-        assertEquals("No se encontr\u00f3 el recurso solicitado.", error.message());
+        assertEquals(
+                "No se encontr" + O_ACENTO + " el recurso solicitado.",
+                error.message());
         assertEquals("/prueba", error.path());
     }
 
@@ -185,7 +189,8 @@ class GlobalExceptionHandlerTest {
         assertEquals(422, error.status());
         assertEquals("Unprocessable Entity", error.error());
         assertEquals(
-                "Los datos enviados no cumplen las reglas de validaci\u00f3n.",
+                "Los datos enviados no cumplen las reglas de validaci"
+                        + O_ACENTO + "n.",
                 error.message()
         );
         assertEquals("/prueba", error.path());
@@ -193,9 +198,9 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void nuncaDebeFiltrarStacktracesNiRutasInternasEnErrorResponse() {
+        String trazaRemota = "Fallo en http://nachintoch.mx:8080/polizas\n\tat mx.edu.uacm.Poliza";
         var conRutaRemota = handler.manejarReglaNegocio(
-                new ReglaNegocioException(
-                        "Fallo en http://nachintoch.mx:8080/polizas\n\tat mx.edu.uacm.Poliza"),
+                new ReglaNegocioException(trazaRemota),
                 request);
         assertNotNull(conRutaRemota.getBody());
         assertFalse(conRutaRemota.getBody().message().contains("nachintoch.mx"));
@@ -210,10 +215,10 @@ class GlobalExceptionHandlerTest {
         assertFalse(conRutaArchivo.getBody().message().contains("C:\\"));
         assertFalse(conRutaArchivo.getBody().message().contains("Exception"));
 
+        String mensajeInterno = "org.springframework.web.client.ResourceAccessException: "
+                + "http://nachintoch.mx:8080/cliente";
         var errorInterno = handler.manejarErrorInterno(
-                new RuntimeException(
-                        "org.springframework.web.client.ResourceAccessException: "
-                        + "http://nachintoch.mx:8080/cliente"),
+                new RuntimeException(mensajeInterno),
                 request);
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, errorInterno.getStatusCode());
         assertNotNull(errorInterno.getBody());

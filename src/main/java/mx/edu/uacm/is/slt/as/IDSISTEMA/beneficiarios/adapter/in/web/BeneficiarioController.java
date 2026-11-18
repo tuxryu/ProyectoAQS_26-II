@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,12 +26,12 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioExcep
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
 
 /**
- * Adaptador REST de entrada para el modulo de beneficiarios: alta vinculada a
- * una poliza (POST /polizas/{clave}/beneficiarios) y consultas GET (por llave
- * compuesta o listado completo de la poliza).
+ * Adaptador REST de entrada para el modulo de beneficiarios: listado general
+ * (GET /beneficiarios), alta vinculada a una poliza
+ * (POST /polizas/{clave}/beneficiarios) y consultas GET por poliza o por llave
+ * compuesta (GET /polizas/{clave}/beneficiarios).
  */
 @RestController
-@RequestMapping("/polizas/{clave}/beneficiarios")
 public class BeneficiarioController {
 
     private final RegistrarBeneficiarioUseCasePort registrarBeneficiarioUseCasePort;
@@ -61,6 +60,20 @@ public class BeneficiarioController {
     }
 
     /**
+     * Lista todos los beneficiarios registrados en el sistema
+     * (GET /beneficiarios -> 200 OK).
+     *
+     * @return lista completa de beneficiarios validos
+     */
+    @GetMapping("/beneficiarios")
+    public List<BeneficiarioRespuestaDto> listarTodos() {
+        return consultarBeneficiarioUseCasePort.listarTodos()
+                .stream()
+                .map(BeneficiarioRespuestaDto::desde)
+                .toList();
+    }
+
+    /**
      * Registra un beneficiario vinculado a la poliza indicada
      * (POST /polizas/{clave}/beneficiarios -> 201 Created).
      *
@@ -68,7 +81,7 @@ public class BeneficiarioController {
      * @param solicitud datos del beneficiario a registrar
      * @return beneficiario registrado con HTTP 201 Created
      */
-    @PostMapping
+    @PostMapping("/polizas/{clave}/beneficiarios")
     @ResponseStatus(HttpStatus.CREATED)
     public BeneficiarioRespuestaDto registrar(
             @PathVariable UUID clave,
@@ -108,7 +121,7 @@ public class BeneficiarioController {
      * @param fechaNacimiento fecha de nacimiento yyyy-MM-dd (opcional para listado)
      * @return respuesta HTTP 200 con la lista o el beneficiario individual
      */
-    @GetMapping
+    @GetMapping("/polizas/{clave}/beneficiarios")
     public ResponseEntity<?> consultar(
             @PathVariable UUID clave,
             @RequestParam(required = false) String nombres,
@@ -144,7 +157,9 @@ public class BeneficiarioController {
                 .stream()
                 .filter(item -> Objects.equals(item.getNombres(), nombres)
                         && Objects.equals(item.getPrimerApellido(), primerApellido)
-                        && Objects.equals(item.getSegundoApellido(), segundoNormalizado)
+                        && Objects.equals(
+                                normalizarSegundoApellido(item.getSegundoApellido()),
+                                segundoNormalizado)
                         && Objects.equals(item.getFechaNacimiento(), fechaNacimiento))
                 .findFirst()
                 .orElseThrow(() -> new BeneficiarioNoEncontradoException(

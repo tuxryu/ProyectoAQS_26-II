@@ -1,8 +1,10 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.out.rest;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -89,32 +91,19 @@ public class BeneficiarioSistemaDuenoAdapter
 
     @Override
     public List<Beneficiario> listarTodos() {
-        BeneficiarioRemotoDto[] filas = TraductorExcepcionesSistemaDueno.ejecutar(
+        List<?> filas = TraductorExcepcionesSistemaDueno.ejecutar(
                 () -> restClient.get()
                         .uri("/beneficiarios")
                         .retrieve()
-                        .body(BeneficiarioRemotoDto[].class));
+                        .body(List.class));
 
-        if (filas == null || filas.length == 0) {
+        if (filas == null || filas.isEmpty()) {
             return List.of();
         }
 
-        List<Beneficiario> resultado = new ArrayList<>();
-        for (BeneficiarioRemotoDto fila : filas) {
-            if (fila == null || fila.id() == null) {
-                LOG.warn(
-                        "Se omite un beneficiario invalido del Sistema Dueno (id nulo): {}",
-                        fila);
-                continue;
-            }
-            try {
-                resultado.add(convertirADominio(fila));
-            } catch (IllegalArgumentException | NullPointerException ex) {
-                LOG.warn(
-                        "Se omite un beneficiario invalido del Sistema Dueno ({}): {}",
-                        ex.getMessage(),
-                        fila);
-            }
+        List<Beneficiario> resultado = new ArrayList<>(filas.size());
+        for (Object elemento : filas) {
+            agregarFilaSiEsValida(resultado, elemento);
         }
         return List.copyOf(resultado);
     }
@@ -169,6 +158,50 @@ public class BeneficiarioSistemaDuenoAdapter
                     "El Sistema Dueno devolvio datos invalidos al guardar el beneficiario.",
                     ex);
         }
+    }
+
+    private void agregarFilaSiEsValida(List<Beneficiario> resultado, Object elemento) {
+        if (!(elemento instanceof Map<?, ?> fila)) {
+            LOG.warn("Se omite un beneficiario invalido del Sistema Dueno: {}", elemento);
+            return;
+        }
+        try {
+            BeneficiarioRemotoDto dto = convertirMapaADto(fila);
+            resultado.add(convertirADominio(dto));
+        } catch (RuntimeException ex) {
+            LOG.warn(
+                    "Se omite un beneficiario invalido del Sistema Dueno ({}): {}",
+                    ex.getMessage(),
+                    elemento);
+        }
+    }
+
+    private BeneficiarioRemotoDto convertirMapaADto(Map<?, ?> fila) {
+        Map<?, ?> origenId = fila.get("id") instanceof Map<?, ?> idMapa ? idMapa : fila;
+        String nombres = leerTexto(origenId.get("nombres"));
+        String primerApellido = leerTexto(origenId.get("primerApellido"));
+        String segundoApellido = normalizarSegundoApellido(
+                leerTexto(origenId.get("segundoApellido")));
+        String fechaNacimiento = leerTexto(origenId.get("fechaNacimiento"));
+        String clavePoliza = leerTexto(origenId.get("clavePoliza"));
+        int porcentaje = leerPorcentaje(fila.get("porcentaje"));
+        BeneficiarioIdRemotoDto idDto = new BeneficiarioIdRemotoDto(
+                nombres, primerApellido, segundoApellido, fechaNacimiento, clavePoliza);
+        return new BeneficiarioRemotoDto(idDto, porcentaje);
+    }
+
+    private String leerTexto(Object valor) {
+        return valor != null ? valor.toString() : null;
+    }
+
+    private int leerPorcentaje(Object valor) {
+        if (valor instanceof Number numero) {
+            return new BigDecimal(numero.toString()).intValueExact();
+        }
+        if (valor instanceof String texto && !texto.trim().isEmpty()) {
+            return Integer.parseInt(texto.trim());
+        }
+        throw new IllegalArgumentException("porcentaje ausente o no numerico");
     }
 
     private BeneficiarioRemotoDto consultarRemoto(
@@ -240,15 +273,23 @@ public class BeneficiarioSistemaDuenoAdapter
 
         LocalDate fecha = FechasSistemaDueno.convertirALocalDate(id.fechaNacimiento());
         UUID clave = UUID.fromString(id.clavePoliza());
+        String segundoApellido = normalizarSegundoApellido(id.segundoApellido());
 
         BeneficiarioId beneficiarioId = new BeneficiarioId(
                 id.nombres(),
                 id.primerApellido(),
-                id.segundoApellido(),
+                segundoApellido,
                 fecha,
                 clave);
 
         return new Beneficiario(beneficiarioId, dto.porcentaje());
+    }
+
+    private String normalizarSegundoApellido(String segundoApellido) {
+        if (segundoApellido == null || segundoApellido.trim().isEmpty()) {
+            return null;
+        }
+        return segundoApellido;
     }
 
     private void validarSegmento(String valor) {
