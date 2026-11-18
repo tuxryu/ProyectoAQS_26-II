@@ -228,9 +228,7 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void debeRechazarDiagonalesYExcesoDeLongitudCon422EnFiltrosYDominio() {
-        String nombreExcesivo = "A".repeat(129);
-        String descripcionExcesiva = "D".repeat(513);
-        String curpExcesiva = "B".repeat(19);
+        final String nombreExcesivo = "A".repeat(129);
 
         assertThrows(
                 ReglaNegocioException.class,
@@ -242,6 +240,7 @@ class GlobalExceptionHandlerTest {
                 ReglaNegocioException.class,
                 () -> FiltroCliente.desde(nombreExcesivo, "Perez", null));
 
+        final String curpExcesiva = "B".repeat(19);
         assertThrows(
                 ReglaNegocioException.class,
                 () -> FiltroPoliza.desde(curpExcesiva, null, null));
@@ -252,6 +251,7 @@ class GlobalExceptionHandlerTest {
                 ReglaNegocioException.class,
                 () -> new FiltroPoliza.PorBeneficiario("Clara", nombreExcesivo, null));
 
+        final String descripcionExcesiva = "D".repeat(513);
         assertThrows(
                 IllegalArgumentException.class,
                 () -> new Poliza(
