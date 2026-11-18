@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.adapter.out.rest.dto.ClienteRemotoDto;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.application.port.out.ClienteRemotoPort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.FechasSistemaDueno;
 
 /**
  * Adaptador de salida REST que implementa {@link ClienteRemotoPort} delegando
@@ -64,6 +65,21 @@ public class ClienteRemotoRestAdapter implements ClienteRemotoPort {
                 nombres, primerApellido, segundoApellido);
     }
 
+    @Override
+    public Cliente guardar(Cliente cliente) {
+        Objects.requireNonNull(cliente, "El cliente a guardar es obligatorio.");
+        ClienteRemotoDto dto = convertirADto(cliente);
+        return convertirADominio(clienteSistemaDuenoAdapter.guardar(dto));
+    }
+
+    @Override
+    public Cliente actualizar(Cliente cliente) {
+        Objects.requireNonNull(cliente, "El cliente a actualizar es obligatorio.");
+        ClienteRemotoDto dto = convertirADto(cliente);
+        return convertirADominio(
+                clienteSistemaDuenoAdapter.actualizar(cliente.getCurp(), dto));
+    }
+
     private Cliente convertirADominio(ClienteRemotoDto dto) {
         return new Cliente(
                 dto.getCurp(),
@@ -72,5 +88,15 @@ public class ClienteRemotoRestAdapter implements ClienteRemotoPort {
                 dto.getSegundoApellido(),
                 dto.getDireccion(),
                 dto.obtenerFechaNacimientoLocal());
+    }
+
+    private ClienteRemotoDto convertirADto(Cliente cliente) {
+        return new ClienteRemotoDto(
+                cliente.getCurp(),
+                cliente.getNombres(),
+                cliente.getPrimerApellido(),
+                cliente.getSegundoApellido(),
+                cliente.getDireccion(),
+                FechasSistemaDueno.formatearParaRuta(cliente.getFechaNacimiento()));
     }
 }

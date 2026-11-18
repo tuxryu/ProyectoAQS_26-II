@@ -1,13 +1,18 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.FiltroPoliza;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.out.ClienteServicioPort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.out.PolizaRemotaPort;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.service.CancelarPolizaService;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.service.CrearPolizaService;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.service.ModificacionPolizaService;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.service.PolizaService;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.exception.PolizaNoEncontradaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
@@ -15,14 +20,16 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.FuncionalidadNoDi
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.ConflictoDatosException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Pruebas unitarias de PolizaService con un puerto falso en memoria (sin Spring):
- * verifica lectura por clave, paginacion ordenada por clave, aplicacion de un
- * filtro por llamada y rechazo cuando se envia mas de un filtro o datos invalidos.
+ * Pruebas unitarias de PolizaService, CrearPolizaService,
+ * ModificacionPolizaService y CancelarPolizaService con puertos falsos en
+ * memoria (sin Spring).
  */
 class PolizaServiceTest {
 
@@ -39,12 +46,20 @@ class PolizaServiceTest {
             = UUID.fromString("99999999-9999-9999-9999-999999999999");
 
     private PuertoPolizaFalso puertoFalso;
+    private ClientePuertoFalso clientePuertoFalso;
     private PolizaService service;
+    private CrearPolizaService crearService;
+    private ModificacionPolizaService modificacionService;
+    private CancelarPolizaService cancelarService;
 
     @BeforeEach
     void configurar() {
         puertoFalso = new PuertoPolizaFalso();
+        clientePuertoFalso = new ClientePuertoFalso();
         service = new PolizaService(puertoFalso);
+        crearService = new CrearPolizaService(puertoFalso, clientePuertoFalso);
+        modificacionService = new ModificacionPolizaService(puertoFalso, clientePuertoFalso);
+        cancelarService = new CancelarPolizaService(puertoFalso);
     }
 
     @Test
@@ -156,30 +171,82 @@ class PolizaServiceTest {
                 () -> service.consultar(filtro, 0, 10));
     }
 
+    @Test
+    void debeCrearPolizaGenerandoUuidYRechazarDuplicadaOClienteInexistente() {
+        Poliza sinClave = new Poliza(
+                null, (byte) 0, 200000.0f, "Cobertura auto", "broe550101hdfabc00");
+        Poliza creada = crearService.crearPoliza(sinClave);
+        assertNotNull(creada.getClave());
+
+        Poliza duplicada = new Poliza(
+                CLAVE_A, (byte) 0, 200000.0f, "Cobertura auto", "broe550101hdfabc00");
+        assertThrows(
+                ConflictoDatosException.class,
+                () -> crearService.crearPoliza(duplicada));
+
+        clientePuertoFalso.existe = false;
+        Poliza sinCliente = new Poliza(
+                UUID.randomUUID(), (byte) 0, 200000.0f, "Auto", "XXXX000101HDFNNN00");
+        assertThrows(
+                ReglaNegocioException.class,
+                () -> crearService.crearPoliza(sinCliente));
+    }
+
+    @Test
+    void debeModificarYEliminarPolizaVerificandoExistenciaPrevia() {
+        Poliza cambios = new Poliza(
+                CLAVE_A, (byte) 1, 750000.0f, "Vida actualizada", "broe550101hdfabc00");
+        Poliza modificada = modificacionService.modificarPoliza(CLAVE_A, cambios);
+        assertEquals(750000.0f, modificada.getMonto());
+
+        assertThrows(
+                PolizaNoEncontradaException.class,
+                () -> modificacionService.modificarPoliza(CLAVE_INEXISTENTE, cambios));
+
+        cancelarService.cancelarPoliza(CLAVE_A);
+        assertThrows(
+                PolizaNoEncontradaException.class,
+                () -> cancelarService.cancelarPoliza(CLAVE_A));
+    }
+
+    private static final class ClientePuertoFalso implements ClienteServicioPort {
+
+        private boolean existe = true;
+
+        @Override
+        public boolean existeClientePorCurp(String curp) {
+            return existe;
+        }
+    }
+
     private static final class PuertoPolizaFalso implements PolizaRemotaPort {
 
         private String ultimaOperacion;
 
-        private final List<Poliza> datos = List.of(
+        private final List<Poliza> datos = new ArrayList<>(List.of(
                 new Poliza(CLAVE_C, (byte) 2, 500000.0f, "Medico", "broe550101hdfabc00"),
                 new Poliza(CLAVE_A, (byte) 0, 1000000.0f, "Auto", "broe550101hdfabc00"),
-                new Poliza(CLAVE_B, (byte) 1, 1500000.0f, "Vida", "broe550101hdfabc00"));
+                new Poliza(CLAVE_B, (byte) 1, 1500000.0f, "Vida", "broe550101hdfabc00")));
 
         @Override
         public Poliza guardar(Poliza poliza) {
             ultimaOperacion = "guardar:" + poliza.getClave();
+            datos.add(poliza);
             return poliza;
         }
 
         @Override
         public Poliza actualizar(UUID clave, Poliza poliza) {
             ultimaOperacion = "actualizar:" + clave;
+            datos.removeIf(actual -> actual.getClave().equals(clave));
+            datos.add(poliza);
             return poliza;
         }
 
         @Override
         public void eliminar(UUID clave) {
             ultimaOperacion = "eliminar:" + clave;
+            datos.removeIf(actual -> actual.getClave().equals(clave));
         }
 
         @Override
@@ -193,7 +260,7 @@ class PolizaServiceTest {
         @Override
         public List<Poliza> listarTodas() {
             ultimaOperacion = "listarTodas";
-            return datos;
+            return List.copyOf(datos);
         }
 
         @Override
@@ -217,7 +284,7 @@ class PolizaServiceTest {
                 String nombres, String primerApellido, String segundoApellido) {
             ultimaOperacion = "buscarPorCliente:"
                     + nombres + ":" + primerApellido + ":" + segundoApellido;
-            return datos;
+            return List.copyOf(datos);
         }
 
         @Override
@@ -225,7 +292,7 @@ class PolizaServiceTest {
                 String nombres, String primerApellido, String segundoApellido) {
             ultimaOperacion = "buscarPorBeneficiario:"
                     + nombres + ":" + primerApellido + ":" + segundoApellido;
-            return datos;
+            return List.copyOf(datos);
         }
     }
 }
