@@ -142,6 +142,95 @@ class BeneficiarioSistemaDuenoAdapterTest {
     }
 
     @Test
+    void debeListarTodosConListaValida() {
+        String json = """
+                [
+                  {
+                    "id": {
+                      "nombres": "Mario",
+                      "primerApellido": "Prueba",
+                      "segundoApellido": "Lopez",
+                      "fechaNacimiento": "2000-02-02T06:00:00.000+00:00",
+                      "clavePoliza": "%s"
+                    },
+                    "porcentaje": 60
+                  },
+                  {
+                    "id": {
+                      "nombres": "Otro",
+                      "primerApellido": "Poliza",
+                      "segundoApellido": null,
+                      "fechaNacimiento": "1995-05-10T06:00:00.000+00:00",
+                      "clavePoliza": "%s"
+                    },
+                    "porcentaje": 100
+                  }
+                ]
+                """.formatted(CLAVE, OTRA_CLAVE);
+
+        mockServer.expect(requestTo(URL_BASE + "/beneficiarios"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        List<Beneficiario> resultado = adapter.listarTodos();
+
+        assertEquals(2, resultado.size());
+        assertEquals("Mario", resultado.get(0).getNombres());
+        assertEquals("Otro", resultado.get(1).getNombres());
+        mockServer.verify();
+    }
+
+    @Test
+    void debeListarTodosConListaVacia() {
+        mockServer.expect(requestTo(URL_BASE + "/beneficiarios"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+        List<Beneficiario> resultado = adapter.listarTodos();
+
+        assertTrue(resultado.isEmpty());
+        mockServer.verify();
+    }
+
+    @Test
+    void debeListarTodosOmitiendoFilaCorrupta() {
+        String json = """
+                [
+                  {
+                    "id": {
+                      "nombres": "Mario",
+                      "primerApellido": "Prueba",
+                      "segundoApellido": "Lopez",
+                      "fechaNacimiento": "2000-02-02T06:00:00.000+00:00",
+                      "clavePoliza": "%s"
+                    },
+                    "porcentaje": 60
+                  },
+                  {
+                    "id": {
+                      "nombres": "Invalido",
+                      "primerApellido": "Porcentaje",
+                      "segundoApellido": null,
+                      "fechaNacimiento": "2000-02-02T06:00:00.000+00:00",
+                      "clavePoliza": "%s"
+                    },
+                    "porcentaje": 150
+                  }
+                ]
+                """.formatted(CLAVE, CLAVE);
+
+        mockServer.expect(requestTo(URL_BASE + "/beneficiarios"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        List<Beneficiario> resultado = adapter.listarTodos();
+
+        assertEquals(1, resultado.size());
+        assertEquals("Mario", resultado.get(0).getNombres());
+        mockServer.verify();
+    }
+
+    @Test
     void debeListarBeneficiariosPorPolizaFiltrandoYOmitiendoFilasCorruptas() {
         String json = """
                 [
@@ -191,7 +280,44 @@ class BeneficiarioSistemaDuenoAdapterTest {
     }
 
     @Test
-    void debeGuardarBeneficiarioMediantePost() {
+    void debeGuardarBeneficiarioConSegundoApellidoMediantePost() {
+        String json = """
+                {
+                  "id": {
+                    "nombres": "Mario",
+                    "primerApellido": "Prueba",
+                    "segundoApellido": "Lopez",
+                    "fechaNacimiento": "2000-02-02T06:00:00.000+00:00",
+                    "clavePoliza": "%s"
+                  },
+                  "porcentaje": 60
+                }
+                """.formatted(CLAVE);
+
+        mockServer.expect(requestTo(
+                        URL_BASE + "/beneficiario/2000-02-02/" + CLAVE
+                                + "/60/Mario/Prueba/Lopez"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        Beneficiario nuevo = new Beneficiario(
+                "Mario",
+                "Prueba",
+                "Lopez",
+                LocalDate.of(2000, 2, 2),
+                UUID.fromString(CLAVE),
+                60);
+
+        Beneficiario guardado = adapter.guardar(nuevo);
+
+        assertEquals("Mario", guardado.getNombres());
+        assertEquals("Lopez", guardado.getSegundoApellido());
+        assertEquals(60, guardado.getPorcentaje());
+        mockServer.verify();
+    }
+
+    @Test
+    void debeGuardarBeneficiarioSinSegundoApellidoMediantePost() {
         String json = """
                 {
                   "id": {
@@ -223,6 +349,62 @@ class BeneficiarioSistemaDuenoAdapterTest {
 
         assertEquals("Ana", guardado.getNombres());
         assertEquals(40, guardado.getPorcentaje());
+        mockServer.verify();
+    }
+
+    @Test
+    void debeLanzarRechazoAlGuardarCuandoResponde200ConCuerpoVacio() {
+        mockServer.expect(requestTo(
+                        URL_BASE + "/beneficiario/1998-04-15/" + CLAVE
+                                + "/40/Ana/Gomez"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess("", MediaType.APPLICATION_JSON));
+
+        Beneficiario nuevo = new Beneficiario(
+                "Ana",
+                "Gomez",
+                null,
+                LocalDate.of(1998, 4, 15),
+                UUID.fromString(CLAVE),
+                40);
+
+        assertThrows(
+                SistemaDuenoRechazoException.class,
+                () -> adapter.guardar(nuevo));
+        mockServer.verify();
+    }
+
+    @Test
+    void debeTraducirError500Y503AlGuardarBeneficiario() {
+        Beneficiario nuevo = new Beneficiario(
+                "Ana",
+                "Gomez",
+                null,
+                LocalDate.of(1998, 4, 15),
+                UUID.fromString(CLAVE),
+                40);
+
+        mockServer.expect(requestTo(
+                        URL_BASE + "/beneficiario/1998-04-15/" + CLAVE
+                                + "/40/Ana/Gomez"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
+
+        assertThrows(
+                SistemaDuenoRechazoException.class,
+                () -> adapter.guardar(nuevo));
+        mockServer.verify();
+
+        mockServer.reset();
+        mockServer.expect(requestTo(
+                        URL_BASE + "/beneficiario/1998-04-15/" + CLAVE
+                                + "/40/Ana/Gomez"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+
+        assertThrows(
+                SistemaDuenoNoDisponibleException.class,
+                () -> adapter.guardar(nuevo));
         mockServer.verify();
     }
 }

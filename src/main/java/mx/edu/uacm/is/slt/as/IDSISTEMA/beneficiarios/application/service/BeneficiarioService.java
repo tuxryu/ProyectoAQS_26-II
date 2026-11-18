@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.AltaBeneficiarioUseCase;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ConsultaBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ConsultarBeneficiarioUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.RegistrarBeneficiarioUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.out.BeneficiarioSistemaDuenoPort;
@@ -26,7 +28,10 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
  */
 @Service
 public class BeneficiarioService
-        implements RegistrarBeneficiarioUseCasePort, ConsultarBeneficiarioUseCasePort {
+        implements AltaBeneficiarioUseCase,
+        ConsultaBeneficiarioUseCase,
+        RegistrarBeneficiarioUseCasePort,
+        ConsultarBeneficiarioUseCasePort {
 
     private static final int PORCENTAJE_MAXIMO_POLIZA = 100;
 
@@ -75,14 +80,7 @@ public class BeneficiarioService
         return registrar(beneficiario);
     }
 
-    /**
-     * Registra un nuevo beneficiario vinculado a una poliza existente,
-     * verificando que no este duplicado y que la suma de porcentajes de la
-     * poliza no rebase el 100%.
-     *
-     * @param beneficiario entidad de dominio a registrar
-     * @return beneficiario registrado y verificado
-     */
+    @Override
     public Beneficiario registrar(Beneficiario beneficiario) {
         if (beneficiario == null || beneficiario.getId() == null) {
             throw new SolicitudInvalidaException(
@@ -133,17 +131,7 @@ public class BeneficiarioService
         return releido;
     }
 
-    /**
-     * Consulta un beneficiario especifico por su llave compuesta dentro de una
-     * poliza.
-     *
-     * @param clavePoliza clave UUID de la poliza
-     * @param nombres nombres del beneficiario
-     * @param primerApellido primer apellido del beneficiario
-     * @param segundoApellido segundo apellido del beneficiario (opcional)
-     * @param fechaNacimiento fecha de nacimiento del beneficiario
-     * @return el beneficiario encontrado
-     */
+    @Override
     public Beneficiario consultarPorDatos(
             UUID clavePoliza,
             String nombres,
@@ -192,12 +180,7 @@ public class BeneficiarioService
         return listarPorPoliza(clavePoliza);
     }
 
-    /**
-     * Lista todos los beneficiarios asociados a una poliza.
-     *
-     * @param clavePoliza clave UUID de la poliza
-     * @return lista de beneficiarios de la poliza
-     */
+    @Override
     public List<Beneficiario> listarPorPoliza(UUID clavePoliza) {
         if (clavePoliza == null) {
             throw new SolicitudInvalidaException("La clave de la poliza es obligatoria.");
