@@ -24,6 +24,16 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
 @RequestMapping("/polizas")
 public class PolizaController {
 
+    private static final String RUTA_BUSQUEDA_CLIENTE = "/c/{nombres}/{primerApellido}";
+
+    private static final String RUTA_BUSQUEDA_CLIENTE_COMPLETA
+            = "/c/{nombres}/{primerApellido}/{segundoApellido}";
+
+    private static final String RUTA_BUSQUEDA_BENEFICIARIO = "/b/{nombres}/{primerApellido}";
+
+    private static final String RUTA_BUSQUEDA_BENEFICIARIO_COMPLETA
+            = "/b/{nombres}/{primerApellido}/{segundoApellido}";
+
     private final ConsultaPolizaUseCase consultaPolizaUseCase;
 
     public PolizaController(ConsultaPolizaUseCase consultaPolizaUseCase) {
@@ -41,6 +51,86 @@ public class PolizaController {
     public PolizaRespuestaDto consultarPorClave(@PathVariable UUID clave) {
         Poliza poliza = consultaPolizaUseCase.consultarPorClave(clave);
         return PolizaRespuestaDto.desde(poliza);
+    }
+
+    @GetMapping("/curp/{curp}")
+    public Pagina<PolizaRespuestaDto> listarPorCurp(
+            @PathVariable String curp,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "20") int tamano) {
+        FiltroPoliza filtro = new FiltroPoliza.PorCurp(curp);
+        Pagina<Poliza> resultado = consultaPolizaUseCase.consultar(filtro, pagina, tamano);
+        return mapearPagina(resultado);
+    }
+
+    @GetMapping("/tipo/{tipo}")
+    public Pagina<PolizaRespuestaDto> listarPorTipo(
+            @PathVariable Integer tipo,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "20") int tamano) {
+        FiltroPoliza filtro = new FiltroPoliza.PorTipo(tipo);
+        Pagina<Poliza> resultado = consultaPolizaUseCase.consultar(filtro, pagina, tamano);
+        return mapearPagina(resultado);
+    }
+
+    @GetMapping("/b/fecha/{fecha}")
+    public Pagina<PolizaRespuestaDto> buscarPorFechaNacimientoBeneficiario(
+            @PathVariable
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate fecha,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "20") int tamano) {
+        FiltroPoliza filtro = new FiltroPoliza.PorFechaNacimientoBeneficiario(fecha);
+        Pagina<Poliza> resultado = consultaPolizaUseCase.consultar(filtro, pagina, tamano);
+        return mapearPagina(resultado);
+    }
+
+    /**
+     * Lista las polizas cuyo titular coincide con el nombre indicado
+     * (GET /polizas/c/{nombres}/{primerApellido}[/{segundoApellido}]).
+     *
+     * @param nombres nombres del cliente
+     * @param primerApellido primer apellido del cliente
+     * @param segundoApellido segundo apellido del cliente (opcional, puede no venir)
+     * @param pagina numero de pagina (por defecto 0)
+     * @param tamano tamano de pagina (por defecto 20)
+     * @return pagina de polizas
+     */
+    @GetMapping({RUTA_BUSQUEDA_CLIENTE, RUTA_BUSQUEDA_CLIENTE_COMPLETA})
+    public Pagina<PolizaRespuestaDto> buscarPorCliente(
+            @PathVariable String nombres,
+            @PathVariable String primerApellido,
+            @PathVariable(required = false) String segundoApellido,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "20") int tamano) {
+        FiltroPoliza filtro = new FiltroPoliza.PorCliente(
+                nombres, primerApellido, segundoApellido);
+        Pagina<Poliza> resultado = consultaPolizaUseCase.consultar(filtro, pagina, tamano);
+        return mapearPagina(resultado);
+    }
+
+    /**
+     * Lista las polizas que tienen un beneficiario con el nombre indicado
+     * (GET /polizas/b/{nombres}/{primerApellido}[/{segundoApellido}]).
+     *
+     * @param nombres nombres del beneficiario
+     * @param primerApellido primer apellido del beneficiario
+     * @param segundoApellido segundo apellido del beneficiario (opcional, puede no venir)
+     * @param pagina numero de pagina (por defecto 0)
+     * @param tamano tamano de pagina (por defecto 20)
+     * @return pagina de polizas
+     */
+    @GetMapping({RUTA_BUSQUEDA_BENEFICIARIO, RUTA_BUSQUEDA_BENEFICIARIO_COMPLETA})
+    public Pagina<PolizaRespuestaDto> buscarPorBeneficiario(
+            @PathVariable String nombres,
+            @PathVariable String primerApellido,
+            @PathVariable(required = false) String segundoApellido,
+            @RequestParam(defaultValue = "0") int pagina,
+            @RequestParam(defaultValue = "20") int tamano) {
+        FiltroPoliza filtro = new FiltroPoliza.PorBeneficiario(
+                nombres, primerApellido, segundoApellido);
+        Pagina<Poliza> resultado = consultaPolizaUseCase.consultar(filtro, pagina, tamano);
+        return mapearPagina(resultado);
     }
 
     /**
@@ -80,7 +170,7 @@ public class PolizaController {
      * @return pagina de polizas
      */
     @GetMapping("/busqueda/cliente")
-    public Pagina<PolizaRespuestaDto> buscarPorCliente(
+    public Pagina<PolizaRespuestaDto> buscarPorClienteLegacy(
             @RequestParam String nombres,
             @RequestParam String primerApellido,
             @RequestParam(required = false) String segundoApellido,
@@ -104,7 +194,7 @@ public class PolizaController {
      * @return pagina de polizas
      */
     @GetMapping("/busqueda/beneficiario")
-    public Pagina<PolizaRespuestaDto> buscarPorBeneficiario(
+    public Pagina<PolizaRespuestaDto> buscarPorBeneficiarioLegacy(
             @RequestParam String nombres,
             @RequestParam String primerApellido,
             @RequestParam(required = false) String segundoApellido,

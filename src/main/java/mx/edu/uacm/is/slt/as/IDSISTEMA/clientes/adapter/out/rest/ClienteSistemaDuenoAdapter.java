@@ -1,11 +1,17 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.adapter.out.rest;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.adapter.out.rest.dto.ClienteRemotoDto;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.FechasSistemaDueno;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.TraductorExcepcionesSistemaDueno;
@@ -17,6 +23,9 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.TraductorExcep
  */
 @Component
 public class ClienteSistemaDuenoAdapter {
+
+    private static final Logger LOG
+            = LoggerFactory.getLogger(ClienteSistemaDuenoAdapter.class);
 
     private static final String RUTA_CON_SEGUNDO_APELLIDO
             = "/cliente/{curp}/{direccion}/{fecha}/{nombres}/{primerApellido}/{segundoApellido}";
@@ -55,6 +64,45 @@ public class ClienteSistemaDuenoAdapter {
     }
 
     /**
+     * Lista todos los clientes registrados en el Sistema Dueno mediante el
+     * punto de acceso GET /clientes, omitiendo registros invalidos o corruptos
+     * de otros equipos.
+     *
+     * @return lista inmutable de entidades {@link Cliente} validas
+     */
+    public List<Cliente> listarTodos() {
+        return consultarLista("/clientes");
+    }
+
+    /**
+     * Busca clientes en el Sistema Dueno por su nombre y apellidos
+     * (GET /clientes/{nombres}/{primerApellido}[/{segundoApellido}]),
+     * omitiendo registros invalidos de otros equipos.
+     *
+     * @param nombres nombres del cliente
+     * @param primerApellido primer apellido del cliente
+     * @param segundoApellido segundo apellido del cliente (opcional)
+     * @return lista inmutable de entidades {@link Cliente} validas
+     */
+    public List<Cliente> buscarPorNombre(
+            String nombres, String primerApellido, String segundoApellido) {
+        validarSegmentoObligatorio(nombres, "El nombre");
+        validarSegmentoObligatorio(primerApellido, "El primer apellido");
+        if (segundoApellido == null || segundoApellido.trim().isEmpty()) {
+            return consultarLista(
+                    "/clientes/{nombres}/{primerApellido}",
+                    nombres,
+                    primerApellido);
+        }
+        validarSinDiagonales(segundoApellido, "El segundo apellido");
+        return consultarLista(
+                "/clientes/{nombres}/{primerApellido}/{segundoApellido}",
+                nombres,
+                primerApellido,
+                segundoApellido);
+    }
+
+    /**
      * Registra un cliente en el Sistema Dueno mediante POST enviando los
      * atributos como segmentos de ruta codificados. Si responde 200 vacio,
      * lanza SistemaDuenoRechazoException.
@@ -83,14 +131,8 @@ public class ClienteSistemaDuenoAdapter {
 
     private ClienteRemotoDto enviarEscritura(
             String curp, ClienteRemotoDto cliente, boolean usarPut) {
-        validarSegmentoObligatorio(curp, "La CURP");
-        validarSegmentoObligatorio(cliente.getDireccion(), "La direccion");
-        validarSegmentoObligatorio(cliente.getNombres(), "El nombre");
-        validarSegmentoObligatorio(cliente.getPrimerApellido(), "El primer apellido");
+        validarCamposDeEscritura(curp, cliente);
         String segundoApellido = cliente.getSegundoApellido();
-        if (segundoApellido != null) {
-            validarSinDiagonales(segundoApellido, "El segundo apellido");
-        }
         LocalDate fechaLocal = cliente.obtenerFechaNacimientoLocal();
         String fechaRuta = FechasSistemaDueno.formatearParaRuta(fechaLocal);
 
@@ -105,38 +147,52 @@ public class ClienteSistemaDuenoAdapter {
         return respuesta;
     }
 
+    private void validarCamposDeEscritura(String curp, ClienteRemotoDto cliente) {
+        validarSegmentoObligatorio(curp, "La CURP");
+        validarSegmentoObligatorio(cliente.getDireccion(), "La direccion");
+        validarSegmentoObligatorio(cliente.getNombres(), "El nombre");
+        validarSegmentoObligatorio(cliente.getPrimerApellido(), "El primer apellido");
+        if (cliente.getSegundoApellido() != null) {
+            validarSinDiagonales(cliente.getSegundoApellido(), "El segundo apellido");
+        }
+    }
+
     private ClienteRemotoDto ejecutarPeticionEscritura(
             String curp,
             ClienteRemotoDto cliente,
             String fechaRuta,
             String segundoApellido,
             boolean usarPut) {
-        if (segundoApellido != null) {
-            if (usarPut) {
-                return restClient.put()
-                        .uri(
-                                RUTA_CON_SEGUNDO_APELLIDO,
-                                curp,
-                                cliente.getDireccion(),
-                                fechaRuta,
-                                cliente.getNombres(),
-                                cliente.getPrimerApellido(),
-                                segundoApellido)
-                        .retrieve()
-                        .body(ClienteRemotoDto.class);
-            }
-            return restClient.post()
-                    .uri(
-                            RUTA_CON_SEGUNDO_APELLIDO,
-                            curp,
-                            cliente.getDireccion(),
-                            fechaRuta,
-                            cliente.getNombres(),
-                            cliente.getPrimerApellido(),
-                            segundoApellido)
-                    .retrieve()
-                    .body(ClienteRemotoDto.class);
+        if (segundoApellido == null) {
+            return enviarSinSegundoApellido(curp, cliente, fechaRuta);
         }
+        return enviarConSegundoApellido(
+                curp, cliente, fechaRuta, segundoApellido, usarPut);
+    }
+
+    private ClienteRemotoDto enviarConSegundoApellido(
+            String curp,
+            ClienteRemotoDto cliente,
+            String fechaRuta,
+            String segundoApellido,
+            boolean usarPut) {
+        RestClient.RequestBodyUriSpec peticion
+                = usarPut ? restClient.put() : restClient.post();
+        return peticion
+                .uri(
+                        RUTA_CON_SEGUNDO_APELLIDO,
+                        curp,
+                        cliente.getDireccion(),
+                        fechaRuta,
+                        cliente.getNombres(),
+                        cliente.getPrimerApellido(),
+                        segundoApellido)
+                .retrieve()
+                .body(ClienteRemotoDto.class);
+    }
+
+    private ClienteRemotoDto enviarSinSegundoApellido(
+            String curp, ClienteRemotoDto cliente, String fechaRuta) {
         return restClient.post()
                 .uri(
                         RUTA_SIN_SEGUNDO_APELLIDO,
@@ -153,6 +209,44 @@ public class ClienteSistemaDuenoAdapter {
         return respuesta == null
                 || respuesta.getCurp() == null
                 || respuesta.getCurp().trim().isEmpty();
+    }
+
+    private List<Cliente> consultarLista(String plantilla, Object... variables) {
+        ClienteRemotoDto[] respuesta = TraductorExcepcionesSistemaDueno.ejecutar(
+                () -> restClient.get()
+                        .uri(plantilla, variables)
+                        .retrieve()
+                        .body(ClienteRemotoDto[].class));
+        if (respuesta == null || respuesta.length == 0) {
+            return List.of();
+        }
+        List<Cliente> clientes = new ArrayList<>(respuesta.length);
+        for (ClienteRemotoDto dto : Arrays.asList(respuesta)) {
+            agregarSiEsValido(clientes, dto);
+        }
+        return List.copyOf(clientes);
+    }
+
+    private void agregarSiEsValido(List<Cliente> clientes, ClienteRemotoDto dto) {
+        if (dto == null || esRespuestaVacia(dto)) {
+            return;
+        }
+        try {
+            clientes.add(convertirADominio(dto));
+        } catch (RuntimeException ex) {
+            LOG.warn("Se omite un cliente invalido del Sistema Dueno: {}",
+                    ex.getMessage());
+        }
+    }
+
+    private Cliente convertirADominio(ClienteRemotoDto dto) {
+        return new Cliente(
+                dto.getCurp(),
+                dto.getNombres(),
+                dto.getPrimerApellido(),
+                dto.getSegundoApellido(),
+                dto.getDireccion(),
+                dto.obtenerFechaNacimientoLocal());
     }
 
     private void validarSegmentoObligatorio(String valor, String campo) {
