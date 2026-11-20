@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${modoEdicion ? 'Modificación de Cliente' : 'Alta de Cliente'})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('clientes')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1 th:text="${modoEdicion ? 'Modificación de Cliente' : 'Alta de Cliente'}">Alta de Cliente</h1>
+            <p class="subtitulo"
+               th:text="${modoEdicion
+                   ? 'Actualiza los datos personales o de dirección del cliente seleccionado.'
+                   : 'Captura los datos del nuevo cliente asegurado para registrarlo en el Sistema Dueño.'}">
+                Captura los datos del cliente.
+            </p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/clientes}">Volver al listado</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <section class="card">
+        <form method="post"
+              th:object="${formulario}"
+              th:action="${modoEdicion}
+                  ? @{/web/clientes/{curp}/editar(curp=${formulario.curp})}
+                  : @{/web/clientes/nuevo}">
+            <div class="form-grid">
+                <div class="form-grupo">
+                    <label for="curp">CURP *</label>
+                    <input id="curp"
+                           type="text"
+                           th:field="*{curp}"
+                           maxlength="18"
+                           th:readonly="${modoEdicion}"
+                           placeholder="Ej. ABCD900101HDFXYZ01"
+                           required>
+                    <span class="ayuda" th:if="${!modoEdicion}">
+                        Exactamente 18 caracteres en mayúsculas, sin diagonales (/ ni \).
+                    </span>
+                    <span class="ayuda" th:if="${modoEdicion}">
+                        La CURP identifica al cliente y no se puede modificar.
+                    </span>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="fechaNacimiento">Fecha de nacimiento *</label>
+                    <input id="fechaNacimiento"
+                           type="date"
+                           th:field="*{fechaNacimiento}"
+                           required>
+                    <span class="ayuda">Formato AAAA-MM-DD.</span>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="nombres">Nombres *</label>
+                    <input id="nombres"
+                           type="text"
+                           th:field="*{nombres}"
+                           maxlength="128"
+                           placeholder="Ej. Ana María"
+                           required>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="primerApellido">Primer apellido *</label>
+                    <input id="primerApellido"
+                           type="text"
+                           th:field="*{primerApellido}"
+                           maxlength="128"
+                           placeholder="Ej. López"
+                           required>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="segundoApellido">Segundo apellido</label>
+                    <input id="segundoApellido"
+                           type="text"
+                           th:field="*{segundoApellido}"
+                           maxlength="128"
+                           placeholder="Opcional">
+                    <span class="ayuda">Campo opcional (máximo 128 caracteres).</span>
+                </div>
+
+                <div class="form-grupo ancho-completo">
+                    <label for="direccion">Dirección *</label>
+                    <input id="direccion"
+                           type="text"
+                           th:field="*{direccion}"
+                           maxlength="512"
+                           placeholder="Calle, número, colonia y alcaldía"
+                           required>
+                    <span class="ayuda">Máximo 512 caracteres; no usar diagonales (/ ni \).</span>
+                </div>
+            </div>
+
+            <div class="acciones-formulario">
+                <button type="submit"
+                        class="btn btn-primario"
+                        th:text="${modoEdicion ? 'Guardar cambios' : 'Registrar cliente'}">
+                    Registrar cliente
+                </button>
+                <a class="btn btn-secundario"
+                   th:href="${modoEdicion}
+                       ? @{/web/clientes/consultar(curp=${formulario.curp})}
+                       : @{/web/clientes}">Cancelar</a>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

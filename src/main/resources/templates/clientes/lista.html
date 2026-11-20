@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Clientes')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('clientes')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1>Gestión de Clientes</h1>
+            <p class="subtitulo">Listado paginado de clientes registrados, consulta por CURP, alta y modificación.</p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/clientes/consultar}">Consultar por CURP</a>
+            <a class="btn btn-primario" th:href="@{/web/clientes/nuevo}">+ Nuevo Cliente</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <div class="grid-busquedas">
+        <section class="card">
+            <h2>Consulta directa por CURP</h2>
+            <form method="get" th:action="@{/web/clientes/consultar}" class="form-fila-inline">
+                <div class="form-grupo">
+                    <label for="curpConsulta">CURP exacta (18 caracteres)</label>
+                    <input id="curpConsulta"
+                           name="curp"
+                           type="text"
+                           maxlength="18"
+                           placeholder="Ej. broe550101hdfabc00"
+                           required>
+                    <span class="ayuda">La búsqueda distingue mayúsculas y minúsculas.</span>
+                </div>
+                <button type="submit" class="btn btn-primario">Buscar CURP</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Filtrar listado por nombre</h2>
+            <form method="get" th:action="@{/web/clientes}">
+                <div class="form-grid">
+                    <div class="form-grupo">
+                        <label for="filtroNombres">Nombres</label>
+                        <input id="filtroNombres"
+                               name="nombres"
+                               type="text"
+                               maxlength="128"
+                               th:value="${filtroNombres}"
+                               placeholder="Ej. Emmett">
+                    </div>
+                    <div class="form-grupo">
+                        <label for="filtroPrimerApellido">Primer apellido</label>
+                        <input id="filtroPrimerApellido"
+                               name="primerApellido"
+                               type="text"
+                               maxlength="128"
+                               th:value="${filtroPrimerApellido}"
+                               placeholder="Ej. Brown">
+                    </div>
+                    <div class="form-grupo">
+                        <label for="filtroSegundoApellido">Segundo apellido (opcional)</label>
+                        <input id="filtroSegundoApellido"
+                               name="segundoApellido"
+                               type="text"
+                               maxlength="128"
+                               th:value="${filtroSegundoApellido}"
+                               placeholder="Ej. Lathrop">
+                    </div>
+                </div>
+                <input type="hidden" name="tamano" th:value="${tamanoActual}">
+                <div class="acciones-formulario">
+                    <button type="submit" class="btn btn-primario">Aplicar filtro</button>
+                    <a th:if="${hayFiltroNombre}"
+                       class="btn btn-secundario"
+                       th:href="@{/web/clientes(tamano=${tamanoActual})}">Limpiar filtro</a>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="barra-tabla">
+            <div>
+                <h2 style="margin-bottom: 2px;">Listado de Clientes</h2>
+                <span class="ayuda"
+                      th:text="'Total de registros encontrados: ' + ${paginaClientes.totalElementos}">
+                    Total de registros encontrados: 0
+                </span>
+            </div>
+
+            <form method="get" th:action="@{/web/clientes}" class="form-fila-inline">
+                <input type="hidden" name="pagina" value="0">
+                <input type="hidden" name="nombres" th:if="${!filtroNombres.isEmpty()}" th:value="${filtroNombres}">
+                <input type="hidden" name="primerApellido" th:if="${!filtroPrimerApellido.isEmpty()}" th:value="${filtroPrimerApellido}">
+                <input type="hidden" name="segundoApellido" th:if="${!filtroSegundoApellido.isEmpty()}" th:value="${filtroSegundoApellido}">
+                <div class="form-grupo" style="flex: 0 0 auto;">
+                    <label for="tamano">Registros por página</label>
+                    <select id="tamano" name="tamano" onchange="this.form.submit()">
+                        <option value="5" th:selected="${tamanoActual == 5}">5</option>
+                        <option value="10" th:selected="${tamanoActual == 10}">10</option>
+                        <option value="20" th:selected="${tamanoActual == 20}">20</option>
+                        <option value="50" th:selected="${tamanoActual == 50}">50</option>
+                    </select>
+                </div>
+                <noscript>
+                    <button type="submit" class="btn btn-secundario btn-chico">Aplicar</button>
+                </noscript>
+            </form>
+        </div>
+
+        <div class="tabla-responsive" th:if="${!paginaClientes.contenido.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>CURP</th>
+                    <th>Nombre completo</th>
+                    <th>Dirección</th>
+                    <th>Fecha de nacimiento</th>
+                    <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="cliente : ${paginaClientes.contenido}">
+                    <td class="codigo-curp" th:text="${cliente.curp}">CURP</td>
+                    <td>
+                        <span th:text="${cliente.nombres}">Nombres</span>
+                        <span th:text="${cliente.primerApellido}">Primer Apellido</span>
+                        <span th:if="${cliente.segundoApellido != null}"
+                              th:text="${cliente.segundoApellido}">Segundo Apellido</span>
+                    </td>
+                    <td th:text="${cliente.direccion}">Dirección</td>
+                    <td th:text="${cliente.fechaNacimiento}">1990-01-01</td>
+                    <td>
+                        <div class="acciones-fila">
+                            <a class="btn btn-secundario btn-chico"
+                               th:href="@{/web/clientes/consultar(curp=${cliente.curp})}">Ver</a>
+                            <a class="btn btn-primario btn-chico"
+                               th:href="@{/web/clientes/{curp}/editar(curp=${cliente.curp})}">Editar</a>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="estado-vacio" th:if="${paginaClientes.contenido.isEmpty()}">
+            <p>No se encontraron clientes para mostrar en esta página.</p>
+            <a class="btn btn-primario" th:href="@{/web/clientes/nuevo}">Registrar primer cliente</a>
+        </div>
+
+        <nav class="paginacion"
+             aria-label="Paginación de clientes"
+             th:if="${paginaClientes.totalPaginas > 0}">
+            <span class="ayuda"
+                  th:text="'Página ' + (${paginaClientes.pagina} + 1) + ' de ' + ${paginaClientes.totalPaginas}">
+                Página 1 de 1
+            </span>
+            <div class="paginacion-botones">
+                <a class="btn btn-secundario btn-chico"
+                   th:classappend="${paginaClientes.pagina <= 0} ? ' btn-deshabilitado'"
+                   th:href="@{/web/clientes(
+                       pagina=${paginaClientes.pagina > 0 ? paginaClientes.pagina - 1 : 0},
+                       tamano=${tamanoActual},
+                       nombres=${!filtroNombres.isEmpty() ? filtroNombres : null},
+                       primerApellido=${!filtroPrimerApellido.isEmpty() ? filtroPrimerApellido : null},
+                       segundoApellido=${!filtroSegundoApellido.isEmpty() ? filtroSegundoApellido : null}
+                   )}">Anterior</a>
+
+                <a class="btn btn-secundario btn-chico"
+                   th:classappend="${paginaClientes.pagina + 1 >= paginaClientes.totalPaginas} ? ' btn-deshabilitado'"
+                   th:href="@{/web/clientes(
+                       pagina=${paginaClientes.pagina + 1},
+                       tamano=${tamanoActual},
+                       nombres=${!filtroNombres.isEmpty() ? filtroNombres : null},
+                       primerApellido=${!filtroPrimerApellido.isEmpty() ? filtroPrimerApellido : null},
+                       segundoApellido=${!filtroSegundoApellido.isEmpty() ? filtroSegundoApellido : null}
+                   )}">Siguiente</a>
+            </div>
+        </nav>
+    </section>
+</main>
+</body>
+</html>
