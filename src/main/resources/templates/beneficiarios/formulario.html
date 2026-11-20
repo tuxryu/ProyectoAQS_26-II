@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${modoEdicion ? 'Modificación de Beneficiario' : 'Alta de Beneficiario'})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('beneficiarios')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1 th:text="${modoEdicion ? 'Modificación de Beneficiario' : 'Alta de Beneficiario'}">Alta de Beneficiario</h1>
+            <p class="subtitulo"
+               th:text="${modoEdicion
+                   ? 'Actualiza el porcentaje asignado al beneficiario seleccionado.'
+                   : 'Captura los datos del nuevo beneficiario y su porcentaje asignado en la póliza.'}">
+                Captura los datos del beneficiario.
+            </p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/beneficiarios}">Volver al listado</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <section class="card">
+        <form method="post"
+              th:object="${formulario}"
+              th:action="${modoEdicion}
+                  ? @{/web/beneficiarios/editar}
+                  : @{/web/beneficiarios/nuevo}">
+            <div class="form-grid">
+                <div class="form-grupo ancho-completo">
+                    <label for="clavePoliza">Clave de Póliza (UUID) *</label>
+                    <input id="clavePoliza"
+                           type="text"
+                           th:field="*{clavePoliza}"
+                           th:readonly="${modoEdicion}"
+                           placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000"
+                           required>
+                    <span class="ayuda" th:if="${!modoEdicion}">
+                        Identificador UUID de la póliza asociada.
+                    </span>
+                    <span class="ayuda" th:if="${modoEdicion}">
+                        Los datos de identificación del beneficiario no se pueden modificar.
+                    </span>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="nombres">Nombres *</label>
+                    <input id="nombres"
+                           type="text"
+                           th:field="*{nombres}"
+                           maxlength="128"
+                           th:readonly="${modoEdicion}"
+                           placeholder="Ej. Ana María"
+                           required>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="primerApellido">Primer apellido *</label>
+                    <input id="primerApellido"
+                           type="text"
+                           th:field="*{primerApellido}"
+                           maxlength="128"
+                           th:readonly="${modoEdicion}"
+                           placeholder="Ej. López"
+                           required>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="segundoApellido">Segundo apellido</label>
+                    <input id="segundoApellido"
+                           type="text"
+                           th:field="*{segundoApellido}"
+                           maxlength="128"
+                           th:readonly="${modoEdicion}"
+                           placeholder="Opcional">
+                    <span class="ayuda">Campo opcional (máximo 128 caracteres).</span>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="fechaNacimiento">Fecha de nacimiento *</label>
+                    <input id="fechaNacimiento"
+                           type="date"
+                           th:field="*{fechaNacimiento}"
+                           th:readonly="${modoEdicion}"
+                           required>
+                    <span class="ayuda">Formato AAAA-MM-DD.</span>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="porcentaje">Porcentaje (%) *</label>
+                    <input id="porcentaje"
+                           type="number"
+                           th:field="*{porcentaje}"
+                           min="1"
+                           max="100"
+                           placeholder="Ej. 50"
+                           required>
+                    <span class="ayuda">Valor entero entre 1 y 100.</span>
+                </div>
+            </div>
+
+            <div class="acciones-formulario">
+                <button type="submit"
+                        class="btn btn-primario"
+                        th:text="${modoEdicion ? 'Guardar cambios' : 'Registrar beneficiario'}">
+                    Registrar beneficiario
+                </button>
+                <a class="btn btn-secundario"
+                   th:href="@{/web/beneficiarios}">Cancelar</a>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>
