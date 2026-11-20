@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Modificación de Cliente')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('clientes')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1>Modificación de Cliente</h1>
+            <p class="subtitulo">Ingresa la CURP del cliente que deseas modificar o selecciónalo desde el listado.</p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/clientes}">Ver listado paginado</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <section class="card">
+        <h2>Seleccionar cliente por CURP</h2>
+        <form method="get" th:action="@{/web/clientes/editar}" class="form-fila-inline">
+            <div class="form-grupo">
+                <label for="curpEditar">CURP exacta del cliente</label>
+                <input id="curpEditar"
+                       name="curp"
+                       type="text"
+                       maxlength="18"
+                       th:value="${curpBuscada}"
+                       placeholder="Ej. broe550101hdfabc00"
+                       required>
+                <span class="ayuda">Respeta mayúsculas y minúsculas exactas.</span>
+            </div>
+            <button type="submit" class="btn btn-primario">Cargar para editar</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

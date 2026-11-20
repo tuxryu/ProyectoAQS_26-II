@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Consulta de Cliente por CURP')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('clientes')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1>Consulta de Cliente por CURP</h1>
+            <p class="subtitulo">Busca un cliente registrado ingresando su CURP exacta.</p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/clientes}">Volver al listado</a>
+            <a class="btn btn-primario" th:href="@{/web/clientes/nuevo}">+ Nuevo Cliente</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <section class="card">
+        <h2>Buscar cliente</h2>
+        <form method="get" th:action="@{/web/clientes/consultar}" class="form-fila-inline">
+            <div class="form-grupo">
+                <label for="curp">CURP (18 caracteres)</label>
+                <input id="curp"
+                       name="curp"
+                       type="text"
+                       maxlength="18"
+                       th:value="${curpBuscada}"
+                       placeholder="Ej. broe550101hdfabc00"
+                       required>
+                <span class="ayuda">Respeta mayúsculas y minúsculas tal como está registrado en el Sistema Dueño.</span>
+            </div>
+            <button type="submit" class="btn btn-primario">Consultar</button>
+        </form>
+    </section>
+
+    <section class="card" th:if="${cliente != null}">
+        <h2>Datos del Cliente</h2>
+        <dl class="detalle-grid">
+            <div class="detalle-item">
+                <dt>CURP</dt>
+                <dd class="codigo-curp" th:text="${cliente.curp}">CURP</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>Nombres</dt>
+                <dd th:text="${cliente.nombres}">Nombres</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>Primer apellido</dt>
+                <dd th:text="${cliente.primerApellido}">Primer apellido</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>Segundo apellido</dt>
+                <dd th:text="${cliente.segundoApellido != null ? cliente.segundoApellido : '—'}">—</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>Fecha de nacimiento</dt>
+                <dd th:text="${cliente.fechaNacimiento}">1990-01-01</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>Dirección</dt>
+                <dd th:text="${cliente.direccion}">Dirección</dd>
+            </div>
+        </dl>
+
+        <div class="acciones-formulario">
+            <a class="btn btn-primario"
+               th:href="@{/web/clientes/{curp}/editar(curp=${cliente.curp})}">Modificar cliente</a>
+            <a class="btn btn-secundario" th:href="@{/web/clientes}">Volver al listado</a>
+        </div>
+    </section>
+</main>
+</body>
+</html>
