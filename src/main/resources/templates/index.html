@@ -60,15 +60,15 @@
 
     <h2 class="seccion-titulo">Módulo de Beneficiarios</h2>
     <div class="grid-menu">
-        <div class="card-menu pendiente">
-            <span class="badge badge-pendiente">Próximamente</span>
-            <a href="#" aria-disabled="true">7. Alta de Beneficiario</a>
-            <p class="desc-menu">Alta de beneficiario en una póliza cuidando el tope acumulado del 100%.</p>
+        <div class="card-menu disponible">
+            <span class="badge badge-activo">Disponible</span>
+            <a th:href="@{/web/beneficiarios/nuevo}">7. Alta de Beneficiario</a>
+            <p class="desc-menu">Alta de beneficiario vinculado a una póliza cuidando el tope acumulado del 100%.</p>
         </div>
-        <div class="card-menu pendiente">
-            <span class="badge badge-pendiente">Próximamente</span>
-            <a href="#" aria-disabled="true">8. Consulta de Beneficiario</a>
-            <p class="desc-menu">Consulta de beneficiarios registrados por póliza o por llave compuesta.</p>
+        <div class="card-menu disponible">
+            <span class="badge badge-activo">Disponible</span>
+            <a th:href="@{/web/beneficiarios}">8. Consulta de Beneficiario</a>
+            <p class="desc-menu">Listado de beneficiarios por póliza con suma actual, % disponible y búsqueda individual.</p>
         </div>
     </div>
 </main>

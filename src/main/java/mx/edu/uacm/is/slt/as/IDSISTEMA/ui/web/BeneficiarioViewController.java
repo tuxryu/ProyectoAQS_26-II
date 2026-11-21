@@ -15,24 +15,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ActualizarBeneficiarioUseCasePort;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.AltaBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ConsultaBeneficiarioUseCase;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.FiltroBeneficiario;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.RegistrarBeneficiarioUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.BeneficiarioId;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
 
 /**
  * Controlador web Thymeleaf de Capa 4 para el modulo de beneficiarios: listado
- * paginado, consulta individual por llave compuesta, alta y modificacion.
+ * por poliza con suma actual y porcentaje disponible hasta 100%, alta vinculada
+ * y busqueda individual. Invoca unicamente {@link AltaBeneficiarioUseCase} y
+ * {@link ConsultaBeneficiarioUseCase}.
  */
 @Controller
 @RequestMapping("/web/beneficiarios")
 public class BeneficiarioViewController {
 
-    private static final int TAMANO_POR_DEFECTO = 10;
+    private static final int PORCENTAJE_MAXIMO = 100;
 
     private static final String VISTA_LISTA = "beneficiarios/lista";
 
@@ -40,81 +38,118 @@ public class BeneficiarioViewController {
 
     private static final String VISTA_FORMULARIO = "beneficiarios/formulario";
 
-    private static final String VISTA_BUSCAR_EDITAR = "beneficiarios/buscar-editar";
-
     private static final String ATRIBUTO_ALERTA = "alerta";
 
     private static final String ATRIBUTO_FORMULARIO = "formulario";
 
-    private static final String ATRIBUTO_MODO_EDICION = "modoEdicion";
+    private static final String ATRIBUTO_CLAVE_POLIZA = "clavePolizaBuscada";
+
+    private static final String ATRIBUTO_BENEFICIARIOS = "beneficiarios";
+
+    private static final String ATRIBUTO_POLIZA_CONSULTADA = "polizaConsultada";
+
+    private static final String ATRIBUTO_SUMA_PORCENTAJE = "sumaPorcentaje";
+
+    private static final String ATRIBUTO_PORCENTAJE_DISPONIBLE = "porcentajeDisponible";
+
+    private static final String ATRIBUTO_CUPO_COMPLETO = "cupoCompleto";
+
+    private final AltaBeneficiarioUseCase altaBeneficiarioUseCase;
 
     private final ConsultaBeneficiarioUseCase consultaBeneficiarioUseCase;
 
-    private final RegistrarBeneficiarioUseCasePort registrarBeneficiarioUseCasePort;
-
-    private final ActualizarBeneficiarioUseCasePort actualizarBeneficiarioUseCasePort;
-
+    /**
+     * Crea el controlador de vistas de beneficiarios inyectando unicamente los
+     * puertos de entrada del modulo.
+     *
+     * @param altaBeneficiarioUseCase puerto de alta de beneficiario
+     * @param consultaBeneficiarioUseCase puerto de consulta de beneficiarios
+     */
     public BeneficiarioViewController(
-            ConsultaBeneficiarioUseCase consultaBeneficiarioUseCase,
-            RegistrarBeneficiarioUseCasePort registrarBeneficiarioUseCasePort,
-            ActualizarBeneficiarioUseCasePort actualizarBeneficiarioUseCasePort) {
+            AltaBeneficiarioUseCase altaBeneficiarioUseCase,
+            ConsultaBeneficiarioUseCase consultaBeneficiarioUseCase) {
+        this.altaBeneficiarioUseCase = Objects.requireNonNull(
+                altaBeneficiarioUseCase,
+                "El puerto AltaBeneficiarioUseCase es obligatorio.");
         this.consultaBeneficiarioUseCase = Objects.requireNonNull(
                 consultaBeneficiarioUseCase,
                 "El puerto ConsultaBeneficiarioUseCase es obligatorio.");
-        this.registrarBeneficiarioUseCasePort = Objects.requireNonNull(
-                registrarBeneficiarioUseCasePort,
-                "El puerto RegistrarBeneficiarioUseCasePort es obligatorio.");
-        this.actualizarBeneficiarioUseCasePort = Objects.requireNonNull(
-                actualizarBeneficiarioUseCasePort,
-                "El puerto ActualizarBeneficiarioUseCasePort es obligatorio.");
     }
 
+    /**
+     * Muestra la vista de beneficiarios por poliza con tabla de beneficiarios,
+     * suma actual de porcentajes y porcentaje disponible hasta 100%.
+     *
+     * @param clavePoliza clave UUID de la poliza a consultar (opcional)
+     * @param model modelo para la vista Thymeleaf
+     * @return plantilla del listado de beneficiarios por poliza
+     */
     @GetMapping
-    public String listar(
+    public String listarPorPoliza(
             @RequestParam(required = false) String clavePoliza,
-            @RequestParam(required = false) String nombres,
-            @RequestParam(required = false) String primerApellido,
-            @RequestParam(required = false) String segundoApellido,
-            @RequestParam(defaultValue = "0") int pagina,
-            @RequestParam(defaultValue = "10") int tamano,
             Model model) {
-        String clavePolizaNorm = normalizarOpcional(clavePoliza);
-        String nombresNorm = normalizarOpcional(nombres);
-        String primerApNorm = normalizarOpcional(primerApellido);
-        String segundoApNorm = normalizarOpcional(segundoApellido);
-
-        cargarFiltrosLista(model, clavePolizaNorm, nombresNorm, primerApNorm, segundoApNorm, pagina, tamano);
+        inicializarEstadoLista(model, clavePoliza);
+        if (clavePoliza == null) {
+            return VISTA_LISTA;
+        }
+        String claveLimpia = clavePoliza.trim();
+        if (claveLimpia.isEmpty()) {
+            model.addAttribute(
+                    ATRIBUTO_ALERTA,
+                    AlertaWeb.validacion(
+                            "Ingrese una clave de poliza (UUID) para consultar beneficiarios."));
+            return VISTA_LISTA;
+        }
         try {
-            UUID uuidPoliza = clavePolizaNorm != null ? parsearUuid(clavePolizaNorm) : null;
-            FiltroBeneficiario filtro = FiltroBeneficiario.desde(
-                    uuidPoliza, nombresNorm, primerApNorm, segundoApNorm);
-            Pagina<Beneficiario> resultado = consultaBeneficiarioUseCase.consultar(
-                    filtro, pagina, tamano);
-            model.addAttribute("paginaBeneficiarios", resultado);
+            UUID uuidPoliza = parsearUuid(claveLimpia);
+            List<Beneficiario> beneficiarios
+                    = consultaBeneficiarioUseCase.listarPorPoliza(uuidPoliza);
+            cargarResumenPoliza(model, uuidPoliza.toString(), beneficiarios);
         } catch (RuntimeException ex) {
-            model.addAttribute("paginaBeneficiarios", paginaVacia(tamano));
             model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
         }
         return VISTA_LISTA;
     }
 
+    /**
+     * Consulta un beneficiario individual por su llave compuesta (clave de
+     * poliza, nombres, apellidos y fecha de nacimiento).
+     *
+     * @param clavePoliza clave UUID de la poliza
+     * @param nombres nombres del beneficiario
+     * @param primerApellido primer apellido del beneficiario
+     * @param segundoApellido segundo apellido del beneficiario (opcional)
+     * @param fechaNacimiento fecha de nacimiento en formato AAAA-MM-DD
+     * @param model modelo para la vista
+     * @return plantilla de consulta individual del beneficiario
+     */
     @GetMapping("/consultar")
-    public String consultarPorId(
+    public String consultarIndividual(
             @RequestParam(required = false) String clavePoliza,
             @RequestParam(required = false) String nombres,
             @RequestParam(required = false) String primerApellido,
             @RequestParam(required = false) String segundoApellido,
             @RequestParam(required = false) String fechaNacimiento,
             Model model) {
-        cargarParametrosBusqueda(model, clavePoliza, nombres, primerApellido, segundoApellido, fechaNacimiento);
-
-        if (clavePoliza == null && nombres == null && primerApellido == null && fechaNacimiento == null) {
+        cargarParametrosBusqueda(
+                model,
+                clavePoliza,
+                nombres,
+                primerApellido,
+                segundoApellido,
+                fechaNacimiento);
+        if (sinParametrosBusqueda(clavePoliza, nombres, primerApellido, fechaNacimiento)) {
             return VISTA_DETALLE;
         }
         try {
-            BeneficiarioId id = construirId(
-                    clavePoliza, nombres, primerApellido, segundoApellido, fechaNacimiento);
-            Beneficiario beneficiario = consultaBeneficiarioUseCase.consultarPorId(id);
+            UUID uuidPoliza = parsearUuid(clavePoliza);
+            LocalDate fecha = parsearFecha(fechaNacimiento);
+            Beneficiario beneficiario = consultaBeneficiarioUseCase.consultarPorDatos(
+                    uuidPoliza,
+                    limpiarObligatorio(nombres),
+                    limpiarObligatorio(primerApellido),
+                    normalizarOpcional(segundoApellido),
+                    fecha);
             model.addAttribute("beneficiario", beneficiario);
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
@@ -122,13 +157,38 @@ public class BeneficiarioViewController {
         return VISTA_DETALLE;
     }
 
+    /**
+     * Muestra el formulario de alta vinculada de beneficiario. Si se recibe
+     * una clave de poliza valida, consulta y muestra la suma actual y el
+     * porcentaje disponible hasta 100%.
+     *
+     * @param clavePoliza clave UUID opcional de la poliza a vincular
+     * @param model modelo para la vista
+     * @return plantilla del formulario de alta
+     */
     @GetMapping("/nuevo")
-    public String mostrarFormularioAlta(Model model) {
-        model.addAttribute(ATRIBUTO_FORMULARIO, new BeneficiarioFormulario());
-        model.addAttribute(ATRIBUTO_MODO_EDICION, false);
+    public String mostrarFormularioAlta(
+            @RequestParam(required = false) String clavePoliza,
+            Model model) {
+        String claveNorm = normalizarOpcional(clavePoliza);
+        BeneficiarioFormulario formulario = claveNorm != null
+                ? BeneficiarioFormulario.paraPoliza(claveNorm)
+                : new BeneficiarioFormulario();
+        model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
+        if (claveNorm != null) {
+            cargarResumenOpcionalParaFormulario(claveNorm, model);
+        }
         return VISTA_FORMULARIO;
     }
 
+    /**
+     * Procesa el alta de un nuevo beneficiario vinculado a una poliza.
+     *
+     * @param formulario datos capturados en el formulario HTML
+     * @param model modelo para re-renderizar en caso de error
+     * @param redirectAttributes atributos flash para la redireccion exitosa
+     * @return redireccion al listado de la poliza o el formulario con alerta
+     */
     @PostMapping("/nuevo")
     public String registrar(
             @ModelAttribute("formulario") BeneficiarioFormulario formulario,
@@ -136,113 +196,108 @@ public class BeneficiarioViewController {
             RedirectAttributes redirectAttributes) {
         try {
             Beneficiario nuevo = construirBeneficiario(formulario);
-            Beneficiario creado = registrarBeneficiarioUseCasePort.registrarBeneficiario(nuevo);
+            Beneficiario creado = altaBeneficiarioUseCase.registrar(nuevo);
             redirectAttributes.addFlashAttribute(
                     ATRIBUTO_ALERTA,
                     AlertaWeb.exito(
                             AlertaWeb.tituloOperacionExitosa(),
-                            "Beneficiario registrado correctamente."));
-            agregarParametrosRedirect(redirectAttributes, creado);
-            return "redirect:/web/beneficiarios/consultar";
+                            "Beneficiario registrado correctamente con "
+                                    + creado.getPorcentaje() + "% asignado."));
+            redirectAttributes.addAttribute("clavePoliza", creado.getClavePoliza().toString());
+            return "redirect:/web/beneficiarios";
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
-            model.addAttribute(ATRIBUTO_MODO_EDICION, false);
+            String claveNorm = normalizarOpcional(formulario.getClavePoliza());
+            if (claveNorm != null) {
+                cargarResumenSilenciosoParaFormulario(claveNorm, model);
+            }
             model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
             return VISTA_FORMULARIO;
         }
     }
 
-    @GetMapping("/editar")
-    public String buscarParaEditar(
-            @RequestParam(required = false) String clavePoliza,
-            @RequestParam(required = false) String nombres,
-            @RequestParam(required = false) String primerApellido,
-            @RequestParam(required = false) String segundoApellido,
-            @RequestParam(required = false) String fechaNacimiento,
-            Model model) {
-        cargarParametrosBusqueda(model, clavePoliza, nombres, primerApellido, segundoApellido, fechaNacimiento);
-
-        if (clavePoliza == null && nombres == null && primerApellido == null && fechaNacimiento == null) {
-            return VISTA_BUSCAR_EDITAR;
-        }
-        try {
-            BeneficiarioId id = construirId(
-                    clavePoliza, nombres, primerApellido, segundoApellido, fechaNacimiento);
-            Beneficiario beneficiario = consultaBeneficiarioUseCase.consultarPorId(id);
-            model.addAttribute(ATRIBUTO_FORMULARIO, BeneficiarioFormulario.desde(beneficiario));
-            model.addAttribute(ATRIBUTO_MODO_EDICION, true);
-            return VISTA_FORMULARIO;
-        } catch (RuntimeException ex) {
-            model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
-            return VISTA_BUSCAR_EDITAR;
-        }
-    }
-
-    @PostMapping("/editar")
-    public String actualizar(
-            @ModelAttribute("formulario") BeneficiarioFormulario formulario,
-            Model model,
-            RedirectAttributes redirectAttributes) {
-        try {
-            Beneficiario actualizado = construirBeneficiario(formulario);
-            Beneficiario guardado = actualizarBeneficiarioUseCasePort.actualizarBeneficiario(actualizado);
-            redirectAttributes.addFlashAttribute(
-                    ATRIBUTO_ALERTA,
-                    AlertaWeb.exito(
-                            AlertaWeb.tituloOperacionExitosa(),
-                            "Porcentaje del beneficiario actualizado correctamente."));
-            agregarParametrosRedirect(redirectAttributes, guardado);
-            return "redirect:/web/beneficiarios/consultar";
-        } catch (RuntimeException ex) {
-            model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
-            model.addAttribute(ATRIBUTO_MODO_EDICION, true);
-            model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
-            return VISTA_FORMULARIO;
-        }
-    }
-
+    /**
+     * Maneja errores de conversion de parametros para responder con vista HTML
+     * y alerta 422 en lugar de JSON.
+     *
+     * @param ex excepcion de tipo de parametro
+     * @param model modelo para la vista
+     * @return plantilla de listado con alerta 422
+     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public String manejarParametroInvalido(
             MethodArgumentTypeMismatchException ex, Model model) {
-        cargarFiltrosLista(model, null, null, null, null, 0, TAMANO_POR_DEFECTO);
-        model.addAttribute("paginaBeneficiarios", paginaVacia(TAMANO_POR_DEFECTO));
+        inicializarEstadoLista(model, null);
         model.addAttribute(
                 ATRIBUTO_ALERTA,
-                AlertaWeb.validacion(
-                        "Los parametros de paginacion o porcentaje deben ser numeros enteros validos."));
+                AlertaWeb.validacion("Uno o mas parametros enviados no tienen formato valido."));
         return VISTA_LISTA;
     }
 
-    private Beneficiario construirBeneficiario(BeneficiarioFormulario formulario) {
-        BeneficiarioId id = construirId(
-                formulario.getClavePoliza(),
-                formulario.getNombres(),
-                formulario.getPrimerApellido(),
-                formulario.getSegundoApellido(),
-                formulario.getFechaNacimiento());
-        if (formulario.getPorcentaje() == null) {
-            throw new ReglaNegocioException("El porcentaje es obligatorio.");
-        }
-        return new Beneficiario(id, formulario.getPorcentaje());
+    private void inicializarEstadoLista(Model model, String clavePoliza) {
+        model.addAttribute(ATRIBUTO_CLAVE_POLIZA, clavePoliza != null ? clavePoliza : "");
+        model.addAttribute(ATRIBUTO_BENEFICIARIOS, List.of());
+        model.addAttribute(ATRIBUTO_POLIZA_CONSULTADA, false);
+        model.addAttribute(ATRIBUTO_SUMA_PORCENTAJE, 0);
+        model.addAttribute(ATRIBUTO_PORCENTAJE_DISPONIBLE, PORCENTAJE_MAXIMO);
+        model.addAttribute(ATRIBUTO_CUPO_COMPLETO, false);
     }
 
-    private BeneficiarioId construirId(
-            String clavePolizaTexto,
-            String nombresTexto,
-            String primerApellidoTexto,
-            String segundoApellidoTexto,
-            String fechaNacimientoTexto) {
-        UUID clavePoliza = parsearUuid(clavePolizaTexto);
-        String nombres = limpiarObligatorio(nombresTexto);
-        String primerApellido = limpiarObligatorio(primerApellidoTexto);
-        String segundoApellido = normalizarOpcional(segundoApellidoTexto);
-        LocalDate fechaNacimiento = parsearFecha(fechaNacimientoTexto);
+    private void cargarResumenPoliza(
+            Model model, String clavePoliza, List<Beneficiario> beneficiarios) {
+        int suma = calcularSumaPorcentajes(beneficiarios);
+        int disponible = Math.max(0, PORCENTAJE_MAXIMO - suma);
+        model.addAttribute(ATRIBUTO_CLAVE_POLIZA, clavePoliza);
+        model.addAttribute(ATRIBUTO_BENEFICIARIOS, beneficiarios);
+        model.addAttribute(ATRIBUTO_POLIZA_CONSULTADA, true);
+        model.addAttribute(ATRIBUTO_SUMA_PORCENTAJE, suma);
+        model.addAttribute(ATRIBUTO_PORCENTAJE_DISPONIBLE, disponible);
+        model.addAttribute(ATRIBUTO_CUPO_COMPLETO, suma >= PORCENTAJE_MAXIMO);
+    }
+
+    private void cargarResumenOpcionalParaFormulario(String clavePoliza, Model model) {
         try {
-            return new BeneficiarioId(
-                    nombres, primerApellido, segundoApellido, fechaNacimiento, clavePoliza);
-        } catch (IllegalArgumentException ex) {
-            throw new ReglaNegocioException(ex.getMessage());
+            UUID uuidPoliza = parsearUuid(clavePoliza);
+            List<Beneficiario> actuales
+                    = consultaBeneficiarioUseCase.listarPorPoliza(uuidPoliza);
+            cargarResumenPoliza(model, uuidPoliza.toString(), actuales);
+        } catch (RuntimeException ex) {
+            model.addAttribute(ATRIBUTO_POLIZA_CONSULTADA, false);
+            model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
         }
+    }
+
+    private void cargarResumenSilenciosoParaFormulario(String clavePoliza, Model model) {
+        try {
+            UUID uuidPoliza = parsearUuid(clavePoliza);
+            List<Beneficiario> actuales
+                    = consultaBeneficiarioUseCase.listarPorPoliza(uuidPoliza);
+            cargarResumenPoliza(model, uuidPoliza.toString(), actuales);
+        } catch (RuntimeException ex) {
+            model.addAttribute(ATRIBUTO_POLIZA_CONSULTADA, false);
+        }
+    }
+
+    private int calcularSumaPorcentajes(List<Beneficiario> beneficiarios) {
+        return beneficiarios.stream()
+                .mapToInt(Beneficiario::getPorcentaje)
+                .sum();
+    }
+
+    private Beneficiario construirBeneficiario(BeneficiarioFormulario formulario) {
+        UUID clavePoliza = parsearUuid(formulario.getClavePoliza());
+        LocalDate fechaNacimiento = parsearFecha(formulario.getFechaNacimiento());
+        int porcentaje = parsearPorcentaje(formulario.getPorcentaje());
+        String nombres = limpiarObligatorio(formulario.getNombres());
+        String primerApellido = limpiarObligatorio(formulario.getPrimerApellido());
+        String segundoApellido = normalizarOpcional(formulario.getSegundoApellido());
+        return new Beneficiario(
+                nombres,
+                primerApellido,
+                segundoApellido,
+                fechaNacimiento,
+                clavePoliza,
+                porcentaje);
     }
 
     private UUID parsearUuid(String uuidTexto) {
@@ -252,7 +307,8 @@ public class BeneficiarioViewController {
         try {
             return UUID.fromString(uuidTexto.trim());
         } catch (IllegalArgumentException ex) {
-            throw new ReglaNegocioException("La clave de la poliza no tiene un formato UUID valido.");
+            throw new ReglaNegocioException(
+                    "La clave de la poliza no tiene un formato UUID valido.");
         }
     }
 
@@ -267,14 +323,27 @@ public class BeneficiarioViewController {
         }
     }
 
-    private void agregarParametrosRedirect(RedirectAttributes redirectAttributes, Beneficiario b) {
-        redirectAttributes.addAttribute("clavePoliza", b.getClavePoliza().toString());
-        redirectAttributes.addAttribute("nombres", b.getNombres());
-        redirectAttributes.addAttribute("primerApellido", b.getPrimerApellido());
-        if (b.getSegundoApellido() != null) {
-            redirectAttributes.addAttribute("segundoApellido", b.getSegundoApellido());
+    private int parsearPorcentaje(String porcentajeTexto) {
+        if (porcentajeTexto == null || porcentajeTexto.trim().isEmpty()) {
+            throw new ReglaNegocioException("El porcentaje es obligatorio (entero entre 1 y 100).");
         }
-        redirectAttributes.addAttribute("fechaNacimiento", b.getFechaNacimiento().toString());
+        try {
+            return Integer.parseInt(porcentajeTexto.trim());
+        } catch (NumberFormatException ex) {
+            throw new ReglaNegocioException(
+                    "El porcentaje debe ser un numero entero entre 1 y 100.");
+        }
+    }
+
+    private boolean sinParametrosBusqueda(
+            String clavePoliza,
+            String nombres,
+            String primerApellido,
+            String fechaNacimiento) {
+        return clavePoliza == null
+                && nombres == null
+                && primerApellido == null
+                && fechaNacimiento == null;
     }
 
     private void cargarParametrosBusqueda(
@@ -284,37 +353,15 @@ public class BeneficiarioViewController {
             String primerApellido,
             String segundoApellido,
             String fechaNacimiento) {
-        model.addAttribute("busquedaClavePoliza", clavePoliza != null ? clavePoliza : "");
-        model.addAttribute("busquedaNombres", nombres != null ? nombres : "");
-        model.addAttribute("busquedaPrimerApellido", primerApellido != null ? primerApellido : "");
-        model.addAttribute("busquedaSegundoApellido", segundoApellido != null ? segundoApellido : "");
-        model.addAttribute("busquedaFechaNacimiento", fechaNacimiento != null ? fechaNacimiento : "");
+        model.addAttribute("busquedaClavePoliza", valorSeguro(clavePoliza));
+        model.addAttribute("busquedaNombres", valorSeguro(nombres));
+        model.addAttribute("busquedaPrimerApellido", valorSeguro(primerApellido));
+        model.addAttribute("busquedaSegundoApellido", valorSeguro(segundoApellido));
+        model.addAttribute("busquedaFechaNacimiento", valorSeguro(fechaNacimiento));
     }
 
-    private void cargarFiltrosLista(
-            Model model,
-            String clavePoliza,
-            String nombres,
-            String primerApellido,
-            String segundoApellido,
-            int pagina,
-            int tamano) {
-        model.addAttribute("filtroClavePoliza", clavePoliza != null ? clavePoliza : "");
-        model.addAttribute("filtroNombres", nombres != null ? nombres : "");
-        model.addAttribute("filtroPrimerApellido", primerApellido != null ? primerApellido : "");
-        model.addAttribute("filtroSegundoApellido", segundoApellido != null ? segundoApellido : "");
-        model.addAttribute("paginaActual", pagina);
-        model.addAttribute("tamanoActual", tamano);
-        boolean hayFiltro = clavePoliza != null
-                || nombres != null
-                || primerApellido != null
-                || segundoApellido != null;
-        model.addAttribute("hayFiltro", hayFiltro);
-    }
-
-    private Pagina<Beneficiario> paginaVacia(int tamano) {
-        int tamanoSeguro = tamano >= 1 ? tamano : TAMANO_POR_DEFECTO;
-        return new Pagina<>(List.of(), 0, tamanoSeguro, 0L, 0);
+    private String valorSeguro(String valor) {
+        return valor != null ? valor : "";
     }
 
     private String normalizarOpcional(String valor) {

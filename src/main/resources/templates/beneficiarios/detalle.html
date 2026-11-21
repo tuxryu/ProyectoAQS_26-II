@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Consulta de Beneficiario')}"></head>
+<head th:replace="~{fragments/layout :: head('Consulta Individual de Beneficiario')}"></head>
 <body>
 <header th:replace="~{fragments/layout :: navbar('beneficiarios')}"></header>
 
 <main class="contenedor">
     <div class="encabezado-pagina">
         <div>
-            <h1>Consulta de Beneficiario</h1>
-            <p class="subtitulo">Busca un beneficiario registrado ingresando los datos de su identificador.</p>
+            <h1>Consulta Individual de Beneficiario</h1>
+            <p class="subtitulo">Busca un beneficiario específico ingresando su póliza, nombre completo y fecha de nacimiento.</p>
         </div>
         <div class="acciones-cabecera">
-            <a class="btn btn-secundario" th:href="@{/web/beneficiarios}">Volver al listado</a>
+            <a class="btn btn-secundario" th:href="@{/web/beneficiarios}">Listado por póliza</a>
             <a class="btn btn-primario" th:href="@{/web/beneficiarios/nuevo}">+ Nuevo Beneficiario</a>
         </div>
     </div>
@@ -19,7 +19,7 @@
     <div th:replace="~{fragments/layout :: alerta}"></div>
 
     <section class="card">
-        <h2>Buscar beneficiario</h2>
+        <h2>Buscar beneficiario por llave compuesta</h2>
         <form method="get" th:action="@{/web/beneficiarios/consultar}">
             <div class="form-grid">
                 <div class="form-grupo ancho-completo">
@@ -68,7 +68,7 @@
                 </div>
             </div>
             <div class="acciones-formulario">
-                <button type="submit" class="btn btn-primario">Consultar</button>
+                <button type="submit" class="btn btn-primario">Consultar beneficiario</button>
             </div>
         </form>
     </section>
@@ -104,14 +104,13 @@
 
         <div class="acciones-formulario">
             <a class="btn btn-primario"
-               th:href="@{/web/beneficiarios/editar(
-                   clavePoliza=${beneficiario.clavePoliza},
-                   nombres=${beneficiario.nombres},
-                   primerApellido=${beneficiario.primerApellido},
-                   segundoApellido=${beneficiario.segundoApellido},
-                   fechaNacimiento=${beneficiario.fechaNacimiento}
-               )}">Modificar beneficiario</a>
-            <a class="btn btn-secundario" th:href="@{/web/beneficiarios}">Volver al listado</a>
+               th:href="@{/web/beneficiarios(clavePoliza=${beneficiario.clavePoliza})}">
+                Ver todos los beneficiarios de esta póliza
+            </a>
+            <a class="btn btn-secundario"
+               th:href="@{/web/beneficiarios/nuevo(clavePoliza=${beneficiario.clavePoliza})}">
+                + Agregar otro beneficiario a esta póliza
+            </a>
         </div>
     </section>
 </main>

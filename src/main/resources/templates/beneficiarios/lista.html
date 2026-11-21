@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Beneficiarios')}"></head>
+<head th:replace="~{fragments/layout :: head('Beneficiarios por Póliza')}"></head>
 <body>
 <header th:replace="~{fragments/layout :: navbar('beneficiarios')}"></header>
 
@@ -8,102 +8,86 @@
     <div class="encabezado-pagina">
         <div>
             <h1>Gestión de Beneficiarios</h1>
-            <p class="subtitulo">Listado paginado de beneficiarios por póliza, consulta detallada, alta y modificación.</p>
+            <p class="subtitulo">Consulta beneficiarios por póliza con suma actual y porcentaje disponible hasta 100%, alta vinculada y búsqueda individual.</p>
         </div>
         <div class="acciones-cabecera">
-            <a class="btn btn-secundario" th:href="@{/web/beneficiarios/consultar}">Consultar beneficiario</a>
-            <a class="btn btn-primario" th:href="@{/web/beneficiarios/nuevo}">+ Nuevo Beneficiario</a>
+            <a class="btn btn-secundario" th:href="@{/web/beneficiarios/consultar}">Búsqueda individual</a>
+            <a class="btn btn-primario"
+               th:href="${polizaConsultada}
+                   ? @{/web/beneficiarios/nuevo(clavePoliza=${clavePolizaBuscada})}
+                   : @{/web/beneficiarios/nuevo}">+ Nuevo Beneficiario</a>
         </div>
     </div>
 
     <div th:replace="~{fragments/layout :: alerta}"></div>
 
     <section class="card">
-        <h2>Filtrar listado de beneficiarios</h2>
-        <form method="get" th:action="@{/web/beneficiarios}">
-            <div class="form-grid">
-                <div class="form-grupo ancho-completo">
-                    <label for="filtroClavePoliza">Clave de Póliza (UUID)</label>
-                    <input id="filtroClavePoliza"
-                           name="clavePoliza"
-                           type="text"
-                           th:value="${filtroClavePoliza}"
-                           placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000">
-                </div>
-                <div class="form-grupo">
-                    <label for="filtroNombres">Nombres</label>
-                    <input id="filtroNombres"
-                           name="nombres"
-                           type="text"
-                           maxlength="128"
-                           th:value="${filtroNombres}"
-                           placeholder="Ej. Ana María">
-                </div>
-                <div class="form-grupo">
-                    <label for="filtroPrimerApellido">Primer apellido</label>
-                    <input id="filtroPrimerApellido"
-                           name="primerApellido"
-                           type="text"
-                           maxlength="128"
-                           th:value="${filtroPrimerApellido}"
-                           placeholder="Ej. López">
-                </div>
-                <div class="form-grupo">
-                    <label for="filtroSegundoApellido">Segundo apellido (opcional)</label>
-                    <input id="filtroSegundoApellido"
-                           name="segundoApellido"
-                           type="text"
-                           maxlength="128"
-                           th:value="${filtroSegundoApellido}"
-                           placeholder="Ej. Pérez">
-                </div>
+        <h2>Consultar beneficiarios de una póliza</h2>
+        <form method="get" th:action="@{/web/beneficiarios}" class="form-fila-inline">
+            <div class="form-grupo">
+                <label for="clavePoliza">Clave de Póliza (UUID)</label>
+                <input id="clavePoliza"
+                       name="clavePoliza"
+                       type="text"
+                       th:value="${clavePolizaBuscada}"
+                       placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000"
+                       required>
+                <span class="ayuda">Ingresa el UUID de la póliza para ver sus beneficiarios y el porcentaje disponible.</span>
             </div>
-            <input type="hidden" name="tamano" th:value="${tamanoActual}">
-            <div class="acciones-formulario">
-                <button type="submit" class="btn btn-primario">Aplicar filtro</button>
-                <a th:if="${hayFiltro}"
-                   class="btn btn-secundario"
-                   th:href="@{/web/beneficiarios(tamano=${tamanoActual})}">Limpiar filtro</a>
-            </div>
+            <button type="submit" class="btn btn-primario">Consultar póliza</button>
         </form>
     </section>
 
-    <section class="card">
+    <section class="card" th:if="${polizaConsultada}">
         <div class="barra-tabla">
             <div>
-                <h2 style="margin-bottom: 2px;">Listado de Beneficiarios</h2>
-                <span class="ayuda"
-                      th:text="'Total de registros encontrados: ' + ${paginaBeneficiarios.totalElementos}">
-                    Total de registros encontrados: 0
+                <h2 style="margin-bottom: 2px;">Beneficiarios de la póliza</h2>
+                <span class="codigo-curp" th:text="${clavePolizaBuscada}">UUID</span>
+            </div>
+            <div class="acciones-cabecera">
+                <a th:if="${!cupoCompleto}"
+                   class="btn btn-primario btn-chico"
+                   th:href="@{/web/beneficiarios/nuevo(clavePoliza=${clavePolizaBuscada})}">
+                    + Agregar beneficiario a esta póliza
+                </a>
+                <span th:if="${cupoCompleto}" class="badge badge-activo">
+                    Porcentaje completo (100%)
                 </span>
             </div>
-
-            <form method="get" th:action="@{/web/beneficiarios}" class="form-fila-inline">
-                <input type="hidden" name="pagina" value="0">
-                <input type="hidden" name="clavePoliza" th:if="${!filtroClavePoliza.isEmpty()}" th:value="${filtroClavePoliza}">
-                <input type="hidden" name="nombres" th:if="${!filtroNombres.isEmpty()}" th:value="${filtroNombres}">
-                <input type="hidden" name="primerApellido" th:if="${!filtroPrimerApellido.isEmpty()}" th:value="${filtroPrimerApellido}">
-                <input type="hidden" name="segundoApellido" th:if="${!filtroSegundoApellido.isEmpty()}" th:value="${filtroSegundoApellido}">
-                <div class="form-grupo" style="flex: 0 0 auto;">
-                    <label for="tamano">Registros por página</label>
-                    <select id="tamano" name="tamano" onchange="this.form.submit()">
-                        <option value="5" th:selected="${tamanoActual == 5}">5</option>
-                        <option value="10" th:selected="${tamanoActual == 10}">10</option>
-                        <option value="20" th:selected="${tamanoActual == 20}">20</option>
-                        <option value="50" th:selected="${tamanoActual == 50}">50</option>
-                    </select>
-                </div>
-                <noscript>
-                    <button type="submit" class="btn btn-secundario btn-chico">Aplicar</button>
-                </noscript>
-            </form>
         </div>
 
-        <div class="tabla-responsive" th:if="${!paginaBeneficiarios.contenido.isEmpty()}">
+        <div class="resumen-porcentaje">
+            <div class="kpi-box">
+                <div class="kpi-etiqueta">Beneficiarios registrados</div>
+                <div class="kpi-valor" th:text="${beneficiarios.size()}">0</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-etiqueta">Suma actual asignada</div>
+                <div class="kpi-valor" th:text="${sumaPorcentaje} + '%'">0%</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-etiqueta">Disponible hasta 100%</div>
+                <div class="kpi-valor"
+                     th:classappend="${cupoCompleto} ? ' completo' : ' disponible'"
+                     th:text="${porcentajeDisponible} + '%'">100%</div>
+            </div>
+        </div>
+
+        <div class="barra-progreso-contenedor"
+             role="progressbar"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             th:attr="aria-valuenow=${sumaPorcentaje}">
+            <div class="barra-progreso-relleno"
+                 th:classappend="${cupoCompleto} ? ' completo'"
+                 th:style="'width: ' + (${sumaPorcentaje > 100 ? 100 : sumaPorcentaje}) + '%;'">
+            </div>
+        </div>
+
+        <div class="tabla-responsive" th:if="${!beneficiarios.isEmpty()}">
             <table>
                 <thead>
                 <tr>
-                    <th>Clave Póliza</th>
                     <th>Nombre completo</th>
                     <th>Fecha de nacimiento</th>
                     <th>Porcentaje</th>
@@ -111,8 +95,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="ben : ${paginaBeneficiarios.contenido}">
-                    <td class="codigo-curp" th:text="${ben.clavePoliza}">UUID</td>
+                <tr th:each="ben : ${beneficiarios}">
                     <td>
                         <span th:text="${ben.nombres}">Nombres</span>
                         <span th:text="${ben.primerApellido}">Primer Apellido</span>
@@ -120,7 +103,7 @@
                               th:text="${ben.segundoApellido}">Segundo Apellido</span>
                     </td>
                     <td th:text="${ben.fechaNacimiento}">1990-01-01</td>
-                    <td th:text="${ben.porcentaje} + '%'">50%</td>
+                    <td><strong th:text="${ben.porcentaje} + '%'">50%</strong></td>
                     <td>
                         <div class="acciones-fila">
                             <a class="btn btn-secundario btn-chico"
@@ -130,15 +113,7 @@
                                    primerApellido=${ben.primerApellido},
                                    segundoApellido=${ben.segundoApellido},
                                    fechaNacimiento=${ben.fechaNacimiento}
-                               )}">Ver</a>
-                            <a class="btn btn-primario btn-chico"
-                               th:href="@{/web/beneficiarios/editar(
-                                   clavePoliza=${ben.clavePoliza},
-                                   nombres=${ben.nombres},
-                                   primerApellido=${ben.primerApellido},
-                                   segundoApellido=${ben.segundoApellido},
-                                   fechaNacimiento=${ben.fechaNacimiento}
-                               )}">Editar</a>
+                               )}">Ver detalle</a>
                         </div>
                     </td>
                 </tr>
@@ -146,42 +121,13 @@
             </table>
         </div>
 
-        <div class="estado-vacio" th:if="${paginaBeneficiarios.contenido.isEmpty()}">
-            <p>No se encontraron beneficiarios para mostrar en esta página.</p>
-            <a class="btn btn-primario" th:href="@{/web/beneficiarios/nuevo}">Registrar primer beneficiario</a>
+        <div class="estado-vacio" th:if="${beneficiarios.isEmpty()}">
+            <p>Esta póliza aún no tiene beneficiarios registrados (100% disponible).</p>
+            <a class="btn btn-primario"
+               th:href="@{/web/beneficiarios/nuevo(clavePoliza=${clavePolizaBuscada})}">
+                Registrar primer beneficiario
+            </a>
         </div>
-
-        <nav class="paginacion"
-             aria-label="Paginación de beneficiarios"
-             th:if="${paginaBeneficiarios.totalPaginas > 0}">
-            <span class="ayuda"
-                  th:text="'Página ' + (${paginaBeneficiarios.pagina} + 1) + ' de ' + ${paginaBeneficiarios.totalPaginas}">
-                Página 1 de 1
-            </span>
-            <div class="paginacion-botones">
-                <a class="btn btn-secundario btn-chico"
-                   th:classappend="${paginaBeneficiarios.pagina <= 0} ? ' btn-deshabilitado'"
-                   th:href="@{/web/beneficiarios(
-                       pagina=${paginaBeneficiarios.pagina > 0 ? paginaBeneficiarios.pagina - 1 : 0},
-                       tamano=${tamanoActual},
-                       clavePoliza=${!filtroClavePoliza.isEmpty() ? filtroClavePoliza : null},
-                       nombres=${!filtroNombres.isEmpty() ? filtroNombres : null},
-                       primerApellido=${!filtroPrimerApellido.isEmpty() ? filtroPrimerApellido : null},
-                       segundoApellido=${!filtroSegundoApellido.isEmpty() ? filtroSegundoApellido : null}
-                   )}">Anterior</a>
-
-                <a class="btn btn-secundario btn-chico"
-                   th:classappend="${paginaBeneficiarios.pagina + 1 >= paginaBeneficiarios.totalPaginas} ? ' btn-deshabilitado'"
-                   th:href="@{/web/beneficiarios(
-                       pagina=${paginaBeneficiarios.pagina + 1},
-                       tamano=${tamanoActual},
-                       clavePoliza=${!filtroClavePoliza.isEmpty() ? filtroClavePoliza : null},
-                       nombres=${!filtroNombres.isEmpty() ? filtroNombres : null},
-                       primerApellido=${!filtroPrimerApellido.isEmpty() ? filtroPrimerApellido : null},
-                       segundoApellido=${!filtroSegundoApellido.isEmpty() ? filtroSegundoApellido : null}
-                   )}">Siguiente</a>
-            </div>
-        </nav>
     </section>
 </main>
 </body>

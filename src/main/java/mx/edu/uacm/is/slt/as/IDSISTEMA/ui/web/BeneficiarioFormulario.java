@@ -1,13 +1,13 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.ui.web;
 
-import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
-
 /**
- * Objeto de respaldo para los formularios Thymeleaf de alta y modificacion de
- * beneficiarios. Conserva la fecha y la clave de poliza como texto para manejar
- * errores de formato con alertas amigables dentro del controlador de vistas.
+ * Objeto de respaldo para el formulario Thymeleaf de alta vinculada de
+ * beneficiarios. Conserva todos los campos como texto para manejar errores de
+ * formato (UUID, fecha y porcentaje) con alertas amigables en el controlador.
  */
 public class BeneficiarioFormulario {
+
+    private String clavePoliza;
 
     private String nombres;
 
@@ -17,32 +17,32 @@ public class BeneficiarioFormulario {
 
     private String fechaNacimiento;
 
-    private String clavePoliza;
+    private String porcentaje;
 
-    private Integer porcentaje;
-
+    /**
+     * Crea un formulario vacio para el alta de beneficiario.
+     */
     public BeneficiarioFormulario() {
     }
 
     /**
-     * Construye un formulario precargado con los datos actuales de un beneficiario.
+     * Crea un formulario precargado con la clave de la poliza seleccionada.
      *
-     * @param beneficiario entidad de dominio del beneficiario
-     * @return formulario listo para edicion en Thymeleaf
+     * @param clavePoliza clave UUID de la poliza en texto
+     * @return formulario inicializado con la poliza vinculada
      */
-    public static BeneficiarioFormulario desde(Beneficiario beneficiario) {
+    public static BeneficiarioFormulario paraPoliza(String clavePoliza) {
         BeneficiarioFormulario form = new BeneficiarioFormulario();
-        form.setNombres(beneficiario.getNombres());
-        form.setPrimerApellido(beneficiario.getPrimerApellido());
-        form.setSegundoApellido(beneficiario.getSegundoApellido());
-        if (beneficiario.getFechaNacimiento() != null) {
-            form.setFechaNacimiento(beneficiario.getFechaNacimiento().toString());
-        }
-        if (beneficiario.getClavePoliza() != null) {
-            form.setClavePoliza(beneficiario.getClavePoliza().toString());
-        }
-        form.setPorcentaje(beneficiario.getPorcentaje());
+        form.setClavePoliza(clavePoliza);
         return form;
+    }
+
+    public String getClavePoliza() {
+        return clavePoliza;
+    }
+
+    public void setClavePoliza(String clavePoliza) {
+        this.clavePoliza = clavePoliza;
     }
 
     public String getNombres() {
@@ -77,19 +77,11 @@ public class BeneficiarioFormulario {
         this.fechaNacimiento = fechaNacimiento;
     }
 
-    public String getClavePoliza() {
-        return clavePoliza;
-    }
-
-    public void setClavePoliza(String clavePoliza) {
-        this.clavePoliza = clavePoliza;
-    }
-
-    public Integer getPorcentaje() {
+    public String getPorcentaje() {
         return porcentaje;
     }
 
-    public void setPorcentaje(Integer porcentaje) {
+    public void setPorcentaje(String porcentaje) {
         this.porcentaje = porcentaje;
     }
 }
