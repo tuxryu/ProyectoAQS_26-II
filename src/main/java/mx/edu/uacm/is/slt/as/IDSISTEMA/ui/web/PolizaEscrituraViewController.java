@@ -12,12 +12,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.CancelarPolizaUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.ConsultaPolizaUseCase;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.ConsultarCatalogoClientesUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.CrearPolizaUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.ModificacionPolizaUseCasePort;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.out.ClienteCatalogoPort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 
@@ -25,11 +24,13 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioExcep
  * Controlador web Thymeleaf de Capa 4 para las operaciones de escritura del
  * modulo de polizas: alta, modificacion y cancelacion. Invoca unicamente
  * puertos de entrada del modulo de polizas y el puerto de salida
- * {@link ClienteCatalogoPort} para poblar el selector de CURP.
+ * {@link consultarCatalogoClientesUseCase} para poblar el selector de CURP.
  */
 @Controller
 @RequestMapping("/web/polizas")
 public class PolizaEscrituraViewController {
+
+    private final ConsultarCatalogoClientesUseCase consultarCatalogoClientesUseCase;
 
     private static final String VISTA_FORMULARIO = "polizas/formulario";
 
@@ -51,24 +52,22 @@ public class PolizaEscrituraViewController {
 
     private final ConsultaPolizaUseCase consultaPolizaUseCase;
 
-    private final ClienteCatalogoPort clienteCatalogoPort;
-
-    /**
+     /**
      * Crea el controlador de escritura de polizas inyectando los puertos de
      * entrada del modulo y el puerto de salida del catalogo de clientes.
      *
      * @param crearPolizaUseCase puerto de alta de poliza
      * @param modificacionPolizaUseCase puerto de modificacion de poliza
      * @param cancelarPolizaUseCase puerto de cancelacion de poliza
-     * @param consultaPolizaUseCase puerto de consulta (para precargar edicion)
-     * @param clienteCatalogoPort puerto de salida para listar clientes
+     * @param consultaPolizaUseCase puerto de consulta (para precargar edicion).
+
      */
     public PolizaEscrituraViewController(
             CrearPolizaUseCasePort crearPolizaUseCase,
             ModificacionPolizaUseCasePort modificacionPolizaUseCase,
             CancelarPolizaUseCasePort cancelarPolizaUseCase,
             ConsultaPolizaUseCase consultaPolizaUseCase,
-            ClienteCatalogoPort clienteCatalogoPort) {
+            ConsultarCatalogoClientesUseCase consultarCatalogoClientesUseCase) {
         this.crearPolizaUseCase = Objects.requireNonNull(
                 crearPolizaUseCase, "El puerto CrearPolizaUseCasePort es obligatorio.");
         this.modificacionPolizaUseCase = Objects.requireNonNull(
@@ -78,8 +77,9 @@ public class PolizaEscrituraViewController {
                 cancelarPolizaUseCase, "El puerto CancelarPolizaUseCasePort es obligatorio.");
         this.consultaPolizaUseCase = Objects.requireNonNull(
                 consultaPolizaUseCase, "El puerto ConsultaPolizaUseCase es obligatorio.");
-        this.clienteCatalogoPort = Objects.requireNonNull(
-                clienteCatalogoPort, "El puerto ClienteCatalogoPort es obligatorio.");
+        this.consultarCatalogoClientesUseCase = Objects.requireNonNull(
+                consultarCatalogoClientesUseCase,
+                "El puerto ConsultarCatalogoClientesUseCase es obligatorio.");
     }
 
     /**
@@ -231,11 +231,12 @@ public class PolizaEscrituraViewController {
 
     private void cargarClientesParaSelector(Model model) {
         try {
-            List<Cliente> clientes = clienteCatalogoPort.listarClientes();
-            model.addAttribute(ATRIBUTO_CLIENTES, clientes);
+            // Se llama al PUERTO DE ENTRADA
+            List<?> clientes = consultarCatalogoClientesUseCase.obtenerCatalogo();
+            model.addAttribute("clientes", clientes);
         } catch (RuntimeException ex) {
-            model.addAttribute(ATRIBUTO_CLIENTES, List.of());
-            model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
+            model.addAttribute("clientes", List.of());
+            model.addAttribute("alerta", AlertaWeb.desdeExcepcion(ex));
         }
     }
 

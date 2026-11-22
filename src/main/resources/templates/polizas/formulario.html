@@ -53,7 +53,9 @@
                     <!-- AQUÍ ESTÁ EL SELECTOR DE CURP QUE LLENA EL ClienteCatalogoPort -->
                     <select id="curpCliente" th:field="*{curpCliente}" required>
                         <option value="">-- Selecciona un cliente --</option>
-                        <option th:each="cliente : ${clientes}"
+                        <!-- Usamos th:with para hacer un cast implícito al recorrer la lista -->
+                        <option th:each="c : ${clientes}"
+                                th:with="cliente=${c}"
                                 th:value="${cliente.curp}"
                                 th:text="${cliente.curp + ' — ' + cliente.nombres + ' ' + cliente.primerApellido + (cliente.segundoApellido != null ? ' ' + cliente.segundoApellido : '')}">
                             CURP — Nombre del Cliente
