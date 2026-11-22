@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${modoEdicion ? 'Modificación de Póliza' : 'Alta de Póliza'})}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('polizas')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1 th:text="${modoEdicion ? 'Modificación de Póliza' : 'Alta de Póliza'}">Alta de Póliza</h1>
+            <p class="subtitulo"
+               th:text="${modoEdicion
+                   ? 'Actualiza el tipo, monto, descripción o titular de la póliza.'
+                   : 'Captura los datos de la nueva póliza para registrarla en el Sistema Dueño.'}">
+                Captura los datos de la póliza.
+            </p>
+        </div>
+        <div class="acciones-cabecera">
+            <!-- Apunta al listado de polizas que hará tu compañero -->
+            <a class="btn btn-secundario" th:href="@{/web/polizas}">Volver al listado</a>
+        </div>
+    </div>
+
+    <!-- Fragmento de alertas -->
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <section class="card">
+        <form method="post" th:object="${formulario}"
+              th:action="${modoEdicion}
+                  ? @{/web/polizas/{clave}/editar(clave=${formulario.clave})}
+                  : @{/web/polizas/nuevo}">
+
+            <div class="form-grid">
+                <div class="form-grupo">
+                    <label for="tipo">Tipo de Póliza *</label>
+                    <select id="tipo" th:field="*{tipo}" required>
+                        <option value="">-- Selecciona un tipo --</option>
+                        <option value="0">0 - Auto</option>
+                        <option value="1">1 - Vida</option>
+                        <option value="2">2 - Médico</option>
+                    </select>
+                </div>
+
+                <div class="form-grupo">
+                    <label for="monto">Monto *</label>
+                    <input id="monto" type="number" step="0.01" min="0.01"
+                           th:field="*{monto}" placeholder="Ej. 15000.00" required>
+                    <span class="ayuda">Número mayor que cero.</span>
+                </div>
+
+                <div class="form-grupo ancho-completo">
+                    <label for="curpCliente">Titular (CURP) *</label>
+                    <!-- AQUÍ ESTÁ EL SELECTOR DE CURP QUE LLENA EL ClienteCatalogoPort -->
+                    <select id="curpCliente" th:field="*{curpCliente}" required>
+                        <option value="">-- Selecciona un cliente --</option>
+                        <option th:each="cliente : ${clientes}"
+                                th:value="${cliente.curp}"
+                                th:text="${cliente.curp + ' — ' + cliente.nombres + ' ' + cliente.primerApellido + (cliente.segundoApellido != null ? ' ' + cliente.segundoApellido : '')}">
+                            CURP — Nombre del Cliente
+                        </option>
+                    </select>
+                    <span class="ayuda">El cliente titular debe existir previamente en el sistema.</span>
+                </div>
+
+                <div class="form-grupo ancho-completo">
+                    <label for="descripcion">Descripción</label>
+                    <input id="descripcion" type="text" maxlength="512"
+                           th:field="*{descripcion}"
+                           placeholder="Detalle opcional de la póliza (máx. 512 caracteres)">
+                    <span class="ayuda">No usar diagonales (/ ni \).</span>
+                </div>
+            </div>
+
+            <div class="acciones-formulario">
+                <button type="submit" class="btn btn-primario"
+                        th:text="${modoEdicion ? 'Guardar cambios' : 'Registrar póliza'}">
+                    Registrar póliza
+                </button>
+                <a class="btn btn-secundario"
+                   th:href="${modoEdicion}
+                       ? @{/web/polizas/consultar(clave=${formulario.clave})}
+                       : @{/web/polizas}">Cancelar</a>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

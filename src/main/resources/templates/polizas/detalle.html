@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Consulta y Detalle de Póliza')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('polizas')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1>Detalle de Póliza</h1>
+            <p class="subtitulo">Consulta la información de una póliza y gestiona su baja.</p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/polizas}">Volver al listado</a>
+            <a class="btn btn-primario" th:href="@{/web/polizas/nuevo}">+ Nueva Póliza</a>
+        </div>
+    </div>
+
+    <!-- Alertas (éxito o error) -->
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <!-- Buscador (se muestra siempre, pero si hay póliza, se pone arriba) -->
+    <section class="card">
+        <h2>Buscar póliza por clave</h2>
+        <form method="get" th:action="@{/web/polizas/consultar}" class="form-fila-inline">
+            <div class="form-grupo">
+                <label for="clave">Clave UUID</label>
+                <input id="clave" name="clave" type="text" maxlength="36"
+                       th:value="${claveBuscada}"
+                       placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000" required>
+            </div>
+            <button type="submit" class="btn btn-primario">Consultar</button>
+        </form>
+    </section>
+
+    <!-- Detalle de la póliza (solo si existe) -->
+    <section class="card" th:if="${poliza != null}">
+        <h2>Datos de la Póliza</h2>
+        <dl class="detalle-grid">
+            <div class="detalle-item ancho-completo">
+                <dt>Clave UUID</dt>
+                <dd class="codigo-curp" th:text="${poliza.clave}">UUID</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>Tipo</dt>
+                <dd th:text="${poliza.tipo == 0 ? 'Auto' : (poliza.tipo == 1 ? 'Vida' : 'Médico')}">Auto</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>Monto</dt>
+                <dd th:text="${'$' + #numbers.formatDecimal(poliza.monto, 1, 2)}">$0.00</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>CURP del Titular</dt>
+                <dd class="codigo-curp" th:text="${poliza.curpCliente}">CURP</dd>
+            </div>
+            <div class="detalle-item ancho-completo">
+                <dt>Descripción</dt>
+                <dd th:text="${poliza.descripcion != null ? poliza.descripcion : '—'}">—</dd>
+            </div>
+        </dl>
+
+        <!-- Acciones: Modificar y Eliminar -->
+        <div class="acciones-formulario">
+            <a class="btn btn-primario"
+               th:href="@{/web/polizas/{clave}/editar(clave=${poliza.clave})}">Modificar póliza</a>
+
+            <!-- Formulario de eliminación con alerta de cascada -->
+            <form method="post"
+                  th:action="@{/web/polizas/{clave}/cancelar(clave=${poliza.clave})}"
+                  onsubmit="return confirm('⚠️ ¿Estás seguro de que deseas eliminar esta póliza?\n\nEsta acción es irreversible y eliminará en cascada todos los beneficiarios asociados a ella.');"
+                  style="display: inline-block;">
+                <button type="submit" class="btn btn-peligro">Eliminar póliza</button>
+            </form>
+        </div>
+    </section>
+</main>
+</body>
+</html>
