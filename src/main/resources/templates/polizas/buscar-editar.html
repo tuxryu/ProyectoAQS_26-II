@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Modificación de Póliza')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('polizas')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1>Modificación de Póliza</h1>
+            <p class="subtitulo">Ingresa la clave UUID de la póliza que deseas modificar.</p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/polizas}">Volver al listado</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <section class="card">
+        <h2>Buscar póliza por clave</h2>
+        <form method="get" th:action="@{/web/polizas/editar}" class="form-fila-inline">
+            <div class="form-grupo">
+                <label for="claveEditar">Clave UUID de la póliza</label>
+                <input id="claveEditar"
+                       name="clave"
+                       type="text"
+                       maxlength="36"
+                       th:value="${claveBuscada}"
+                       placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000"
+                       required>
+                <span class="ayuda">Formato UUID de 36 caracteres.</span>
+            </div>
+            <button type="submit" class="btn btn-primario">Cargar para editar</button>
+        </form>
+    </section>
+</main>
+</body>
+</html>

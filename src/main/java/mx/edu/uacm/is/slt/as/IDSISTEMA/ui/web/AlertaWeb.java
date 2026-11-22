@@ -252,4 +252,57 @@ public record AlertaWeb(String tipo, Integer codigo, String titulo, String mensa
     public static String mensajeCurpLongitud() {
         return "La CURP no puede exceder los 18 caracteres.";
     }
+
+    /**
+     * Devuelve un mensaje amigable de poliza registrada con exito.
+     *
+     * @param clave clave UUID de la poliza creada
+     * @return mensaje de confirmacion
+     */
+    public static String mensajeAltaPolizaExitosa(java.util.UUID clave) {
+        return "La p" + O_ACENTO + "liza con clave " + clave
+                + " se registr" + O_ACENTO + " correctamente en el Sistema Due"
+                + N_TILDE + "o.";
+    }
+
+    /**
+     * Devuelve un mensaje amigable de poliza actualizada con exito.
+     *
+     * @param clave clave UUID de la poliza actualizada
+     * @return mensaje de confirmacion
+     */
+    public static String mensajeActualizacionPolizaExitosa(java.util.UUID clave) {
+        return "La p" + O_ACENTO + "liza con clave " + clave
+                + " se actualiz" + O_ACENTO + " correctamente y fue verificada en el Sistema Due"
+                + N_TILDE + "o.";
+    }
+
+    /**
+     * Devuelve un mensaje amigable de poliza cancelada con exito.
+     *
+     * @param clave clave UUID de la poliza cancelada
+     * @return mensaje de confirmacion
+     */
+    public static String mensajeCancelacionPolizaExitosa(String clave) {
+        return "La p" + O_ACENTO + "liza con clave " + clave
+                + " fue cancelada y eliminada del Sistema Due" + N_TILDE + "o.";
+    }
+
+    /**
+     * Devuelve un mensaje de alerta en cascada antes de cancelar una poliza.
+     *
+     * @param clave clave UUID de la poliza
+     * @param totalBeneficiarios numero de beneficiarios asociados
+     * @return texto de confirmacion para la alerta
+     */
+    public static String mensajeAlertaCascada(String clave, int totalBeneficiarios) {
+        if (totalBeneficiarios <= 0) {
+            return "Esta a punto de cancelar la p" + O_ACENTO + "liza " + clave
+                    + ". Esta acci" + O_ACENTO + "n no se puede deshacer.";
+        }
+        return "Esta a punto de cancelar la p" + O_ACENTO + "liza " + clave
+                + ". Tambi" + A_ACENTO + "n se eliminar" + A_ACENTO + "n "
+                + totalBeneficiarios + " beneficiario(s) asociado(s). "
+                + "Esta acci" + O_ACENTO + "n no se puede deshacer.";
+    }
 }
