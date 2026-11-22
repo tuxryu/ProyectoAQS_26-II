@@ -15,7 +15,7 @@
             <a th:href="@{/}" th:classappend="${activa == 'inicio'} ? 'activo'">Inicio</a>
             <a th:href="@{/web/clientes}" th:classappend="${activa == 'clientes'} ? 'activo'">Clientes</a>
             <span class="nav-disabled" title="Disponible próximamente (S3-2)">Pólizas</span>
-            <span class="nav-disabled" title="Disponible próximamente (S3-3)">Beneficiarios</span>
+            <a th:href="@{/web/beneficiarios}" th:classappend="${activa == 'beneficiarios'} ? 'activo'">Beneficiarios</a>
         </nav>
     </div>
 </header>

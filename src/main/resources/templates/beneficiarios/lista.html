@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Beneficiarios por Póliza')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('beneficiarios')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1>Gestión de Beneficiarios</h1>
+            <p class="subtitulo">Consulta beneficiarios por póliza con suma actual y porcentaje disponible hasta 100%, alta vinculada y búsqueda individual.</p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/beneficiarios/consultar}">Búsqueda individual</a>
+            <a class="btn btn-primario"
+               th:href="${polizaConsultada}
+                   ? @{/web/beneficiarios/nuevo(clavePoliza=${clavePolizaBuscada})}
+                   : @{/web/beneficiarios/nuevo}">+ Nuevo Beneficiario</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <section class="card">
+        <h2>Consultar beneficiarios de una póliza</h2>
+        <form method="get" th:action="@{/web/beneficiarios}" class="form-fila-inline">
+            <div class="form-grupo">
+                <label for="clavePoliza">Clave de Póliza (UUID)</label>
+                <input id="clavePoliza"
+                       name="clavePoliza"
+                       type="text"
+                       th:value="${clavePolizaBuscada}"
+                       placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000"
+                       required>
+                <span class="ayuda">Ingresa el UUID de la póliza para ver sus beneficiarios y el porcentaje disponible.</span>
+            </div>
+            <button type="submit" class="btn btn-primario">Consultar póliza</button>
+        </form>
+    </section>
+
+    <section class="card" th:if="${polizaConsultada}">
+        <div class="barra-tabla">
+            <div>
+                <h2 style="margin-bottom: 2px;">Beneficiarios de la póliza</h2>
+                <span class="codigo-curp" th:text="${clavePolizaBuscada}">UUID</span>
+            </div>
+            <div class="acciones-cabecera">
+                <a th:if="${!cupoCompleto}"
+                   class="btn btn-primario btn-chico"
+                   th:href="@{/web/beneficiarios/nuevo(clavePoliza=${clavePolizaBuscada})}">
+                    + Agregar beneficiario a esta póliza
+                </a>
+                <span th:if="${cupoCompleto}" class="badge badge-activo">
+                    Porcentaje completo (100%)
+                </span>
+            </div>
+        </div>
+
+        <div class="resumen-porcentaje">
+            <div class="kpi-box">
+                <div class="kpi-etiqueta">Beneficiarios registrados</div>
+                <div class="kpi-valor" th:text="${beneficiarios.size()}">0</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-etiqueta">Suma actual asignada</div>
+                <div class="kpi-valor" th:text="${sumaPorcentaje} + '%'">0%</div>
+            </div>
+            <div class="kpi-box">
+                <div class="kpi-etiqueta">Disponible hasta 100%</div>
+                <div class="kpi-valor"
+                     th:classappend="${cupoCompleto} ? ' completo' : ' disponible'"
+                     th:text="${porcentajeDisponible} + '%'">100%</div>
+            </div>
+        </div>
+
+        <div class="barra-progreso-contenedor"
+             role="progressbar"
+             aria-valuemin="0"
+             aria-valuemax="100"
+             th:attr="aria-valuenow=${sumaPorcentaje}">
+            <div class="barra-progreso-relleno"
+                 th:classappend="${cupoCompleto} ? ' completo'"
+                 th:style="'width: ' + (${sumaPorcentaje > 100 ? 100 : sumaPorcentaje}) + '%;'">
+            </div>
+        </div>
+
+        <div class="tabla-responsive" th:if="${!beneficiarios.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Nombre completo</th>
+                    <th>Fecha de nacimiento</th>
+                    <th>Porcentaje</th>
+                    <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="ben : ${beneficiarios}">
+                    <td>
+                        <span th:text="${ben.nombres}">Nombres</span>
+                        <span th:text="${ben.primerApellido}">Primer Apellido</span>
+                        <span th:if="${ben.segundoApellido != null}"
+                              th:text="${ben.segundoApellido}">Segundo Apellido</span>
+                    </td>
+                    <td th:text="${ben.fechaNacimiento}">1990-01-01</td>
+                    <td><strong th:text="${ben.porcentaje} + '%'">50%</strong></td>
+                    <td>
+                        <div class="acciones-fila">
+                            <a class="btn btn-secundario btn-chico"
+                               th:href="@{/web/beneficiarios/consultar(
+                                   clavePoliza=${ben.clavePoliza},
+                                   nombres=${ben.nombres},
+                                   primerApellido=${ben.primerApellido},
+                                   segundoApellido=${ben.segundoApellido},
+                                   fechaNacimiento=${ben.fechaNacimiento}
+                               )}">Ver detalle</a>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="estado-vacio" th:if="${beneficiarios.isEmpty()}">
+            <p>Esta póliza aún no tiene beneficiarios registrados (100% disponible).</p>
+            <a class="btn btn-primario"
+               th:href="@{/web/beneficiarios/nuevo(clavePoliza=${clavePolizaBuscada})}">
+                Registrar primer beneficiario
+            </a>
+        </div>
+    </section>
+</main>
+</body>
+</html>

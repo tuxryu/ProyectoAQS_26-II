@@ -475,3 +475,59 @@ tbody tr:hover {
     color: var(--color-primario);
     font-size: 1.15rem;
 }
+
+.resumen-porcentaje {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.kpi-box {
+    background-color: #f8fafc;
+    border: 1px solid var(--color-borde);
+    border-radius: 6px;
+    padding: 12px 14px;
+}
+
+.kpi-etiqueta {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--color-texto-suave);
+    margin-bottom: 4px;
+}
+
+.kpi-valor {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-primario);
+}
+
+.kpi-valor.disponible {
+    color: var(--color-exito-texto);
+}
+
+.kpi-valor.completo {
+    color: var(--color-aviso-texto);
+}
+
+.barra-progreso-contenedor {
+    width: 100%;
+    height: 12px;
+    background-color: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.barra-progreso-relleno {
+    height: 100%;
+    background-color: var(--color-secundario);
+    transition: width 0.2s ease;
+}
+
+.barra-progreso-relleno.completo {
+    background-color: var(--color-exito-borde);
+}
+
