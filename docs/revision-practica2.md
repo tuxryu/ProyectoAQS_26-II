@@ -4,9 +4,9 @@ Documento de referencia para todo el equipo (**404 Equipo no Encontrado**). Conc
 
 ---
 
-## 1. Diagrama de Arquitectura (`arquitectura4`)
+## 1. Diagrama de Arquitectura (`arquitectura5`)
 
-![Arquitectura Limpia - Monolito Modular](arquitectura4.png)
+![Arquitectura Limpia v5 - Monolito Modular](arquitectura5.png)
 
 ### Decisiones de arquitectura para este hito
 1. **Monolito Modular con Arquitectura Limpia**: Los 3 contextos delimitados (`clientes`, `polizas`, `beneficiarios`) viven en un mismo proyecto ejecutable de Spring Boot (`:8080`), aislados mediante puertos de entrada (`port/in`) y puertos de salida (`port/out`).

@@ -85,5 +85,6 @@ Toda la documentación del proyecto se encuentra en el directorio [`docs/`](docs
 - [`docs/catalogo-endpoints-y-hallazgos.md`](docs/catalogo-endpoints-y-hallazgos.md) — Catálogo de los **17 endpoints** (`11 GET, 3 POST, 2 PUT, 1 DELETE`) y **24 hallazgos** del Sistema Dueño.
 - [`docs/hallazgos-sistema-dueno.pdf`](docs/hallazgos-sistema-dueno.pdf) — Evidencia en PDF de las pruebas al servidor remoto.
 - [`docs/casos-de-uso/`](docs/casos-de-uso/) — Los 11 documentos `.docx` de especificación de casos de uso (`NRM`, `PRN` y `EX`).
-- [`docs/arquitectura4.puml`](docs/arquitectura4.puml) / [`docs/arquitectura4.png`](docs/arquitectura4.png) — Diagrama de Arquitectura Limpia.
+- [`docs/arquitectura5.puml`](docs/arquitectura5.puml) / [`docs/arquitectura5.png`](docs/arquitectura5.png) — Diagrama de Arquitectura Limpia (v5, actualizado con los 17 endpoints e IU Web en `ui/web`).
+- [`docs/documento-vista-arquitectura5.md`](docs/documento-vista-arquitectura5.md) — Documento de acompañamiento de la vista arquitectónica (Reactivo 3.6: necesidades de interesados, gestión de decisiones/ADRs, revisión de vistas y evaluación del formato).
 - [`docs/revision-practica2.md`](docs/revision-practica2.md) — Guía técnica y especificación de diseño.

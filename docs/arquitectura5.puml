@@ -1,0 +1,124 @@
+@startuml
+title Arquitectura Limpia v5 — Monolito Modular (mx.edu.uacm.is.slt.as.IDSISTEMA)
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam dpi 160
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam ArrowColor #2D3748
+skinparam ArrowFontSize 11
+skinparam PackageBorderColor #4A5568
+skinparam RectangleBorderColor #4A5568
+skinparam roundcorner 8
+
+top to bottom direction
+
+rectangle "Capa 4: Frameworks, Drivers y Despliegue — Java 25 · Spring Boot 4.1.1 · Docker / Azure Container Apps (:8080)" as C4in #EEF2F7 {
+  component "<<Interfaz Web (ui/web)>>\nIU Web Thymeleaf (Renderizado en Servidor)\n--\n• HomeViewController (/)\n• ClienteViewController (/web/clientes)\n• PolizaViewController + PolizaEscrituraViewController (/web/polizas)\n• BeneficiarioViewController (/web/beneficiarios)\n• AlertaWeb (404, 409, 422, 502, 503) · layout.html · estilos.css" as UI #BFE3F7
+
+  component "<<Cliente Externo>>\nCliente HTTP / REST\n--\n• Pruebas API (curl / Postman / Integración)\n• Consume JSON sobre :8080" as RESTCLI #DCE6F2
+}
+
+rectangle "Capa 3: Adaptadores de Entrada REST (adapter/in/web · JSON en :8080)" as C3in #E8F7EE {
+  component "<<Adaptador REST>>\nClienteController\n--\n• GET /clientes (paginado / filtro)\n• GET /clientes/{curp}\n• POST /clientes · PUT /clientes/{curp}" as ACli #A3E4B7
+
+  component "<<Adaptador REST>>\nPolizaController + PolizaEscrituraController\n--\n• GET /polizas (6 filtros + paginación)\n• GET /polizas/{clave}\n• POST /polizas · PATCH /polizas/{clave}\n• DELETE /polizas/{clave}?confirmar=true" as APol #A3E4B7
+
+  component "<<Adaptador REST>>\nBeneficiarioController\n--\n• GET /beneficiarios\n• POST /polizas/{clave}/beneficiarios\n• GET /polizas/{clave}/beneficiarios" as ABen #A3E4B7
+
+  component "<<shared/adapter/in/web>>\nGlobalExceptionHandler\n--\n• 400, 404, 409, 422, 502, 503\n• ErrorResponse sanitizado" as GEH #D5F5E3
+}
+
+rectangle "Capa 2: Casos de Uso (Monolito Modular — 3 Contextos Delimitados Aislados · Verificado con ArchUnit)" as C2 #F3EEFA {
+
+  package "Módulo Clientes (clientes/application)" as MSC #FFFFFF {
+    component "<<port/in>>\nConsultaClienteUseCase\nRegistrar / ActualizarClienteUseCasePort\nConsultarClienteUseCase" as PInCli #EDE7F6
+    component "<<Servicios de Aplicación>>\nClienteService · ConsultarClientePorCurpService\n--\n• Alta: CURP mayúsculas, 409 si existe\n• Modif.: PUT con 2º ap. / POST sin 2º ap.\n• Listado paginado (GET /clientes) · relectura GET" as SCli #C5B3E6
+    component "<<port/out>>\nClienteRemotoPort" as POutCli #FFF3E0
+  }
+
+  package "Módulo Pólizas — Coordinador (polizas/application)" as MSP #FFFFFF {
+    component "<<port/in>>\nConsultaPolizaUseCase\nCrear / Modif. / CancelarPolizaUseCasePort\nConsultarCatalogoClientesUseCase" as PInPol #EDE7F6
+    component "<<Servicios de Aplicación>>\nPolizaService · Crear/Modif./CancelarPolizaService\nConsultarCatalogoClientesService\n--\n• Alta (UUID propio, valida titular 422, 409 duplicado)\n• Modificación parcial · Baja verificada con GET\n• Consulta con 6 filtros y paginación en memoria" as SPol #C5B3E6
+    component "<<port/out>>\nPolizaRemotaPort\nClienteServicioPort · ClienteCatalogoPort" as POutPol #FFF3E0
+  }
+
+  package "Módulo Beneficiarios (beneficiarios/application)" as MSB #FFFFFF {
+    component "<<port/in>>\nAltaBeneficiarioUseCase · ConsultaBeneficiarioUseCase\nRegistrar / ConsultarBeneficiarioUseCasePort" as PInBen #EDE7F6
+    component "<<Servicio de Aplicación>>\nBeneficiarioService\n--\n• Exige póliza existente (404) y no duplicado (409)\n• Valida tope acumulado <= 100% vía GET /beneficiarios\n• Relectura GET tras escritura" as SBen #C5B3E6
+    component "<<port/out>>\nBeneficiarioSistemaDuenoPort\nPolizaServicioPort" as POutBen #FFF3E0
+  }
+}
+
+rectangle "Capa 1: Entidades de Dominio — Modelos Hibernate JPA en tránsito (sin BD local ni Spring)" as C1 #FAFAFA {
+  component "<<@Entity>>\nCliente\n--\n• @Id curp: String(18)\n• nombres, apellidos (128)\n• segundoApellido [opcional]\n• direccion (512)\n• fechaNacimiento: LocalDate" as ECli #FFFFFF
+
+  component "<<@Entity>>\nPoliza\n--\n• @Id clave: UUID\n• tipo: byte (0=Auto, 1=Vida, 2=Médico)\n• monto: float (> 0)\n• descripcion (512) [sin / ni \\]\n• curpCliente: String(18)" as EPol #FFFFFF
+
+  component "<<@Entity>>\nBeneficiario\n--\n• @EmbeddedId id: BeneficiarioId\n  (nombres, apellidos, fechaNac,\n   clavePoliza)\n• porcentaje: int (1..100)" as EBen #FFFFFF
+
+  component "<<shared/domain>>\nModelos y Excepciones Base\n--\n• Pagina<T> (paginación en memoria)\n• RecursoNoEncontrado · ReglaNegocio\n• SolicitudInvalida" as EShd #F7FAFC
+
+  ECli -[hidden]down-> EBen
+  EPol -[hidden]down-> EShd
+}
+
+rectangle "Capa 3: Adaptadores de Salida (adapter/out/rest · shared/infrastructure · config/HttpConfig)" as C3out #FFF7E6 {
+  component "<<Adaptadores REST al Sistema Dueño>>\nClienteRemotoRestAdapter · ClienteSistemaDuenoAdapter\nPolizaSistemaDuenoAdapter · BeneficiarioSistemaDuenoAdapter\n--\n• HttpConfig (RestClient) · DTOs JSON camelCase · FechasSistemaDueno (CDMX)\n• TraductorExcepcionesSistemaDueno: 200 vacío -> 404/502 · 500 -> 502 · 502/503/504/red -> 503\n• Segmentos codificados (prohíbe / y \\) · omite filas corruptas con LOG.warn" as AOut #F8C471
+
+  component "<<Adaptadores Inter-módulo en Memoria>>\nComunicación Desacoplada vía port/in\n--\n• ClienteRestAdapter (polizas -> ConsultarClienteUseCase)\n• ClienteCatalogoRestAdapter (polizas -> ConsultaClienteUseCase)\n• PolizaRestAdapter (beneficiarios -> ConsultaPolizaUseCase)" as AInt #FAD7A0
+}
+
+cloud "Capa 4: Infraestructura Remota — Única Fuente de Datos" as C4out #FDEDEC {
+  component "<<Sistema Externo>>\nSistema Dueño de Pólizas — http://nachintoch.mx:8080\n--\n• 17 endpoints activos: 11 GET, 3 POST, 2 PUT, 1 DELETE\n• Incluye GET /clientes (listado general) y GET /beneficiarios (listado general)\n• Respuestas JSON en camelCase · fechas ISO UTC-6 (CDMX)\n• POST = upsert · casi no valida · DELETE /poliza/{clave} elimina beneficiarios en cascada" as EXT #F5B7B1
+}
+
+note right of C4out
+  Verificación automática en CI (GitHub Actions):
+  • ArchUnit (ArquitecturaLimpiaTest): domain puro;
+    módulos aislados en core; ui/web y adapter/in/web
+    solo invocan port/in (nunca service, port/out,
+    adapter/out ni infrastructure).
+  • Checkstyle (OpenJDK) + 173 pruebas automáticas.
+end note
+
+' Capa 4 Entrada -> Puertos de Entrada (en memoria, regla ArchUnit) y REST
+UI --> PInCli : invoca en memoria
+UI --> PInPol : invoca en memoria
+UI --> PInBen : invoca en memoria
+
+RESTCLI --> ACli : HTTP/JSON
+RESTCLI --> APol : HTTP/JSON
+RESTCLI --> ABen : HTTP/JSON
+
+' Capa 3 Entrada -> Puertos de Entrada
+ACli --> PInCli : invoca
+APol --> PInPol : invoca
+ABen --> PInBen : invoca
+
+' Implementacion de Puertos de Entrada y uso de Puertos de Salida
+SCli .up.|> PInCli
+SPol .up.|> PInPol
+SBen .up.|> PInBen
+
+SCli --> POutCli
+SPol --> POutPol
+SBen --> POutBen
+
+' Uso de Dominio (Capa 1)
+SCli ..> ECli : valida y usa
+SPol ..> EPol : valida y usa
+SBen ..> EBen : valida y usa
+
+' Inversion de dependencias (Capa 3 Salida implementa port/out)
+AOut .up.|> POutCli : implementa
+AOut .up.|> POutPol : implementa
+AOut .up.|> POutBen : implementa
+
+AInt .up.|> POutPol : implementa (Cliente*)
+AInt .up.|> POutBen : implementa (Poliza*)
+
+' Adaptadores de salida hacia Sistema Dueno
+AOut --> EXT : HTTP / REST\n(17 endpoints)
+
+@enduml
