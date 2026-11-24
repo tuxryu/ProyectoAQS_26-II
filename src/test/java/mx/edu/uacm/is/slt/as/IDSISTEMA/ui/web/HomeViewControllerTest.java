@@ -28,6 +28,8 @@ class HomeViewControllerTest {
                 .andExpect(content().string(containsString("/web/clientes")))
                 .andExpect(content().string(containsString("/web/clientes/nuevo")))
                 .andExpect(content().string(containsString("/web/clientes/editar")))
+                .andExpect(content().string(containsString("/web/polizas")))
+                .andExpect(content().string(containsString("/web/polizas/nuevo")))
                 .andExpect(content().string(containsString("/web/beneficiarios")))
                 .andExpect(content().string(containsString("/web/beneficiarios/nuevo")));
     }

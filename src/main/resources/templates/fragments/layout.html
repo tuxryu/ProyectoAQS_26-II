@@ -14,7 +14,7 @@
         <nav class="navbar-links" aria-label="Navegación principal">
             <a th:href="@{/}" th:classappend="${activa == 'inicio'} ? 'activo'">Inicio</a>
             <a th:href="@{/web/clientes}" th:classappend="${activa == 'clientes'} ? 'activo'">Clientes</a>
-            <span class="nav-disabled" title="Disponible próximamente (S3-2)">Pólizas</span>
+            <a th:href="@{/web/polizas}" th:classappend="${activa == 'polizas'} ? 'activo'">Pólizas</a>
             <a th:href="@{/web/beneficiarios}" th:classappend="${activa == 'beneficiarios'} ? 'activo'">Beneficiarios</a>
         </nav>
     </div>
