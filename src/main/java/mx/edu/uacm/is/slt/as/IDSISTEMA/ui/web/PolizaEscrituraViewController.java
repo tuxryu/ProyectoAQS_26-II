@@ -306,32 +306,4 @@ public class PolizaEscrituraViewController {
                     "La clave de la poliza debe ser un UUID valido.");
         }
     }
-
-    /**
-     * Muestra el detalle de una póliza por su clave UUID.
-     *
-     * @param clave clave UUID de la póliza
-     * @param model modelo para la vista
-     * @return plantilla de detalle
-     */
-    @GetMapping("/consultar")
-    public String consultarPorClave(
-            @RequestParam(required = false) String clave,
-            Model model) {
-        model.addAttribute("claveBuscada", clave != null ? clave : "");
-
-        if (clave == null || clave.trim().isEmpty()) {
-            return "polizas/detalle"; // Se muestra el buscador vacío
-        }
-
-        try {
-            UUID uuid = parsearClave(clave.trim());
-            Poliza poliza = consultaPolizaUseCase.consultarPorClave(uuid);
-            model.addAttribute("poliza", poliza);
-        } catch (RuntimeException ex) {
-            model.addAttribute("alerta", AlertaWeb.desdeExcepcion(ex));
-        }
-
-        return "polizas/detalle";
-    }
 }
