@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Consulta y Detalle de Póliza')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('polizas')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1>Detalle de Póliza</h1>
+            <p class="subtitulo">Consulta la información de una póliza, sus beneficiarios actuales y gestiona su modificación o baja.</p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/polizas}">Volver al listado</a>
+            <a class="btn btn-primario" th:href="@{/web/polizas/nuevo}">+ Nueva Póliza</a>
+        </div>
+    </div>
+
+    <!-- Alertas (éxito o error) -->
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <!-- Buscador por clave UUID -->
+    <section class="card">
+        <h2>Buscar póliza por clave</h2>
+        <form method="get" th:action="@{/web/polizas/consultar}" class="form-fila-inline">
+            <div class="form-grupo">
+                <label for="clave">Clave UUID</label>
+                <input id="clave" name="clave" type="text" maxlength="36"
+                       th:value="${claveBuscada}"
+                       placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000" required>
+            </div>
+            <button type="submit" class="btn btn-primario">Consultar</button>
+        </form>
+    </section>
+
+    <!-- Detalle de la póliza (solo si existe) -->
+    <section class="card" th:if="${poliza != null}">
+        <h2>Datos de la Póliza</h2>
+        <dl class="detalle-grid">
+            <div class="detalle-item ancho-completo">
+                <dt>Clave UUID</dt>
+                <dd class="codigo-curp" th:text="${poliza.clave}">UUID</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>Tipo</dt>
+                <dd th:text="${poliza.tipo == 0 ? 'Auto' : (poliza.tipo == 1 ? 'Vida' : 'Médico')}">Auto</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>Monto</dt>
+                <dd th:text="${'$' + #numbers.formatDecimal(poliza.monto, 1, 'COMMA', 2, 'POINT')}">$0.00</dd>
+            </div>
+            <div class="detalle-item">
+                <dt>CURP del Titular</dt>
+                <dd class="codigo-curp">
+                    <a th:href="@{/web/clientes/consultar(curp=${poliza.curpCliente})}"
+                       th:text="${poliza.curpCliente}">CURP</a>
+                </dd>
+            </div>
+            <div class="detalle-item ancho-completo">
+                <dt>Descripción</dt>
+                <dd th:text="${poliza.descripcion != null && !poliza.descripcion.isEmpty() ? poliza.descripcion : '—'}">—</dd>
+            </div>
+        </dl>
+
+        <!-- Acciones: Modificar y Eliminar -->
+        <div class="acciones-formulario">
+            <a class="btn btn-primario"
+               th:href="@{/web/polizas/{clave}/editar(clave=${poliza.clave})}">Modificar póliza</a>
+
+            <!-- Formulario de eliminación con alerta de cascada -->
+            <form method="post"
+                  th:action="@{/web/polizas/{clave}/cancelar(clave=${poliza.clave})}"
+                  onsubmit="return confirm('⚠️ ¿Estás seguro de que deseas eliminar esta póliza?\n\nEsta acción es irreversible y eliminará en cascada todos los beneficiarios asociados a ella.');"
+                  style="display: inline-block;">
+                <button type="submit" class="btn btn-peligro">Eliminar póliza</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Beneficiarios actuales de la póliza -->
+    <section class="card" th:if="${poliza != null}">
+        <div class="barra-tabla">
+            <div>
+                <h2 style="margin-bottom: 2px;">Beneficiarios actuales</h2>
+                <span class="ayuda" th:if="${beneficiariosCargados}"
+                      th:text="'Suma asignada: ' + ${sumaPorcentaje} + '% · Disponible: ' + ${porcentajeDisponible} + '%'">
+                    Suma asignada: 0% · Disponible: 100%
+                </span>
+            </div>
+            <div class="acciones-cabecera">
+                <a class="btn btn-secundario btn-chico"
+                   th:href="@{/web/beneficiarios(clavePoliza=${poliza.clave})}">Gestionar beneficiarios</a>
+                <a class="btn btn-primario btn-chico"
+                   th:if="${beneficiariosCargados && porcentajeDisponible > 0}"
+                   th:href="@{/web/beneficiarios/nuevo(clavePoliza=${poliza.clave})}">+ Agregar beneficiario</a>
+            </div>
+        </div>
+
+        <div th:if="${alertaBeneficiarios != null}"
+             role="alert"
+             th:class="'alerta alerta-' + ${alertaBeneficiarios.tipo}">
+            <div class="alerta-titulo">
+                <span class="badge badge-http"
+                      th:if="${alertaBeneficiarios.codigo != null}"
+                      th:text="'HTTP ' + ${alertaBeneficiarios.codigo}">HTTP 503</span>
+                <span th:text="${alertaBeneficiarios.titulo}">Aviso</span>
+            </div>
+            <p class="alerta-mensaje" th:text="${alertaBeneficiarios.mensaje}">No se pudieron cargar los beneficiarios.</p>
+        </div>
+
+        <div class="tabla-responsive" th:if="${beneficiariosCargados && !beneficiarios.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Nombre completo</th>
+                    <th>Fecha de nacimiento</th>
+                    <th>Porcentaje</th>
+                    <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="ben : ${beneficiarios}">
+                    <td>
+                        <span th:text="${ben.nombres}">Nombres</span>
+                        <span th:text="${ben.primerApellido}">Primer Apellido</span>
+                        <span th:if="${ben.segundoApellido != null}"
+                              th:text="${ben.segundoApellido}">Segundo Apellido</span>
+                    </td>
+                    <td th:text="${ben.fechaNacimiento}">1990-01-01</td>
+                    <td><strong th:text="${ben.porcentaje} + '%'">50%</strong></td>
+                    <td>
+                        <a class="btn btn-secundario btn-chico"
+                           th:href="@{/web/beneficiarios/consultar(
+                               clavePoliza=${ben.clavePoliza},
+                               nombres=${ben.nombres},
+                               primerApellido=${ben.primerApellido},
+                               segundoApellido=${ben.segundoApellido},
+                               fechaNacimiento=${ben.fechaNacimiento}
+                           )}">Ver</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="estado-vacio" th:if="${beneficiariosCargados && beneficiarios.isEmpty()}">
+            <p>Esta póliza aún no tiene beneficiarios registrados.</p>
+            <a class="btn btn-primario btn-chico"
+               th:href="@{/web/beneficiarios/nuevo(clavePoliza=${poliza.clave})}">Registrar primer beneficiario</a>
+        </div>
+    </section>
+</main>
+</body>
+</html>

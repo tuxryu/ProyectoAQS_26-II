@@ -1,0 +1,81 @@
+# Artefactos de compilacion
+target/
+**/target/
+build/
+**/build/
+*.jar
+*.war
+
+# Control de versiones y CI/CD
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Documentacion y utilidades no requeridas para compilar
+docs/
+config/
+*.md
+Dockerfile
+.dockerignore
+mvnw
+mvnw.cmd
+.mvn/
+
+# IDEs y editores
+.idea/
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+.apt_generated
+.springBeans
+.sts4-cache
+*.iml
+*.iws
+*.ipr
+/nbproject/
+
+# Secretos, credenciales y configuraciones locales
+.env
+.env.*
+config.local.json
+application-local.yml
+application-local.properties
+application-prod.yml
+.azure/
+.ssh/
+*.pem
+*.key
+*.ppk
+*.pub
+*.pfx
+*.p12
+
+# Logs, temporales y entornos ajenos
+logs/
+*.log
+*.pid
+nohup.out
+tmp/
+temp/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Archivos especificos de sistema operativo (Windows / Linux Mint / macOS)
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+.DS_Store
+*~
+*.swp
+*.swo
+.directory
+.Trash-*
+.fuse_hidden*
+.nfs*
+.netrwhist

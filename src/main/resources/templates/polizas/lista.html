@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Consulta de Pólizas')}"></head>
+<body>
+<header th:replace="~{fragments/layout :: navbar('polizas')}"></header>
+
+<main class="contenedor">
+    <div class="encabezado-pagina">
+        <div>
+            <h1>Gestión y Consulta de Pólizas</h1>
+            <p class="subtitulo">Listado paginado de pólizas con 6 modos de filtro, consulta por clave UUID y acceso al detalle con beneficiarios.</p>
+        </div>
+        <div class="acciones-cabecera">
+            <a class="btn btn-secundario" th:href="@{/web/polizas/consultar}">Consultar por clave UUID</a>
+            <a class="btn btn-primario" th:href="@{/web/polizas/nuevo}">+ Nueva Póliza</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: alerta}"></div>
+
+    <div class="grid-busquedas">
+        <section class="card">
+            <h2>Consulta directa por clave UUID</h2>
+            <form method="get" th:action="@{/web/polizas/consultar}" class="form-fila-inline">
+                <div class="form-grupo">
+                    <label for="claveDirecta">Clave UUID de la póliza</label>
+                    <input id="claveDirecta"
+                           name="clave"
+                           type="text"
+                           maxlength="36"
+                           placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000"
+                           required>
+                    <span class="ayuda">Muestra los datos completos de la póliza y sus beneficiarios actuales.</span>
+                </div>
+                <button type="submit" class="btn btn-primario">Ver detalle</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Filtrar listado de pólizas</h2>
+            <form method="get" th:action="@{/web/polizas}" id="formFiltrosPolizas">
+                <div class="form-grupo">
+                    <label for="tipoFiltro">Criterio de búsqueda</label>
+                    <select id="tipoFiltro" name="tipoFiltro" onchange="actualizarCamposFiltro()">
+                        <option value="todas" th:selected="${tipoFiltro == 'todas'}">1. Todas las pólizas (sin filtro)</option>
+                        <option value="curp" th:selected="${tipoFiltro == 'curp'}">2. Por CURP del titular</option>
+                        <option value="tipo" th:selected="${tipoFiltro == 'tipo'}">3. Por tipo de póliza</option>
+                        <option value="fechaBeneficiario" th:selected="${tipoFiltro == 'fechaBeneficiario'}">4. Por fecha de nacimiento de beneficiario</option>
+                        <option value="cliente" th:selected="${tipoFiltro == 'cliente'}">5. Por nombre del cliente titular</option>
+                        <option value="beneficiario" th:selected="${tipoFiltro == 'beneficiario'}">6. Por nombre del beneficiario</option>
+                    </select>
+                </div>
+
+                <div class="form-grupo campo-filtro" data-filtro="curp">
+                    <label for="filtroCurp">CURP exacta del titular</label>
+                    <input id="filtroCurp"
+                           name="curp"
+                           type="text"
+                           maxlength="18"
+                           th:value="${filtroCurp}"
+                           placeholder="Ej. broe550101hdfabc00">
+                    <span class="ayuda">Respeta mayúsculas y minúsculas tal cual en el Sistema Dueño.</span>
+                </div>
+
+                <div class="form-grupo campo-filtro" data-filtro="tipo">
+                    <label for="filtroTipo">Tipo de póliza</label>
+                    <select id="filtroTipo" name="tipo">
+                        <option value="">-- Selecciona un tipo --</option>
+                        <option value="0" th:selected="${filtroTipo == '0'}">0 - Auto</option>
+                        <option value="1" th:selected="${filtroTipo == '1'}">1 - Vida</option>
+                        <option value="2" th:selected="${filtroTipo == '2'}">2 - Médico</option>
+                    </select>
+                </div>
+
+                <div class="form-grupo campo-filtro" data-filtro="fechaBeneficiario">
+                    <label for="filtroFechaBeneficiario">Fecha de nacimiento del beneficiario</label>
+                    <input id="filtroFechaBeneficiario"
+                           name="fechaBeneficiario"
+                           type="date"
+                           th:value="${filtroFechaBeneficiario}">
+                    <span class="ayuda">Formato AAAA-MM-DD.</span>
+                </div>
+
+                <div class="form-grid campo-filtro" data-filtro="cliente beneficiario">
+                    <div class="form-grupo">
+                        <label for="filtroNombres">Nombres *</label>
+                        <input id="filtroNombres"
+                               name="nombres"
+                               type="text"
+                               maxlength="128"
+                               th:value="${filtroNombres}"
+                               placeholder="Ej. Emmett">
+                    </div>
+                    <div class="form-grupo">
+                        <label for="filtroPrimerApellido">Primer apellido *</label>
+                        <input id="filtroPrimerApellido"
+                               name="primerApellido"
+                               type="text"
+                               maxlength="128"
+                               th:value="${filtroPrimerApellido}"
+                               placeholder="Ej. Brown">
+                    </div>
+                    <div class="form-grupo">
+                        <label for="filtroSegundoApellido">Segundo apellido (opcional)</label>
+                        <input id="filtroSegundoApellido"
+                               name="segundoApellido"
+                               type="text"
+                               maxlength="128"
+                               th:value="${filtroSegundoApellido}"
+                               placeholder="Opcional">
+                    </div>
+                </div>
+
+                <input type="hidden" name="tamano" th:value="${tamanoActual}">
+                <div class="acciones-formulario">
+                    <button type="submit" class="btn btn-primario">Aplicar filtro</button>
+                    <a th:if="${hayFiltroActivo}"
+                       class="btn btn-secundario"
+                       th:href="@{/web/polizas(tamano=${tamanoActual})}">Limpiar filtro</a>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <section class="card">
+        <div class="barra-tabla">
+            <div>
+                <h2 style="margin-bottom: 2px;">Listado de Pólizas</h2>
+                <span class="ayuda"
+                      th:text="'Total de pólizas encontradas: ' + ${paginaPolizas.totalElementos}">
+                    Total de pólizas encontradas: 0
+                </span>
+            </div>
+
+            <form method="get" th:action="@{/web/polizas}" class="form-fila-inline">
+                <input type="hidden" name="pagina" value="0">
+                <input type="hidden" name="tipoFiltro" th:value="${tipoFiltro}">
+                <input type="hidden" name="curp" th:if="${!filtroCurp.isEmpty()}" th:value="${filtroCurp}">
+                <input type="hidden" name="tipo" th:if="${!filtroTipo.isEmpty()}" th:value="${filtroTipo}">
+                <input type="hidden" name="fechaBeneficiario" th:if="${!filtroFechaBeneficiario.isEmpty()}" th:value="${filtroFechaBeneficiario}">
+                <input type="hidden" name="nombres" th:if="${!filtroNombres.isEmpty()}" th:value="${filtroNombres}">
+                <input type="hidden" name="primerApellido" th:if="${!filtroPrimerApellido.isEmpty()}" th:value="${filtroPrimerApellido}">
+                <input type="hidden" name="segundoApellido" th:if="${!filtroSegundoApellido.isEmpty()}" th:value="${filtroSegundoApellido}">
+                <div class="form-grupo" style="flex: 0 0 auto;">
+                    <label for="tamano">Registros por página</label>
+                    <select id="tamano" name="tamano" onchange="this.form.submit()">
+                        <option value="5" th:selected="${tamanoActual == 5}">5</option>
+                        <option value="10" th:selected="${tamanoActual == 10}">10</option>
+                        <option value="20" th:selected="${tamanoActual == 20}">20</option>
+                        <option value="50" th:selected="${tamanoActual == 50}">50</option>
+                    </select>
+                </div>
+                <noscript>
+                    <button type="submit" class="btn btn-secundario btn-chico">Aplicar</button>
+                </noscript>
+            </form>
+        </div>
+
+        <div class="tabla-responsive" th:if="${!paginaPolizas.contenido.isEmpty()}">
+            <table>
+                <thead>
+                <tr>
+                    <th>Clave UUID</th>
+                    <th>Tipo</th>
+                    <th>Monto</th>
+                    <th>CURP del titular</th>
+                    <th>Descripción</th>
+                    <th>Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="poliza : ${paginaPolizas.contenido}">
+                    <td class="codigo-curp" th:text="${poliza.clave}">UUID</td>
+                    <td>
+                        <span class="badge badge-activo"
+                              th:text="${poliza.tipo == 0 ? 'Auto' : (poliza.tipo == 1 ? 'Vida' : 'Médico')}">Auto</span>
+                    </td>
+                    <td th:text="${'$' + #numbers.formatDecimal(poliza.monto, 1, 'COMMA', 2, 'POINT')}">$0.00</td>
+                    <td class="codigo-curp" th:text="${poliza.curpCliente}">CURP</td>
+                    <td th:text="${poliza.descripcion != null && !poliza.descripcion.isEmpty() ? poliza.descripcion : '—'}">—</td>
+                    <td>
+                        <div class="acciones-fila">
+                            <a class="btn btn-secundario btn-chico"
+                               th:href="@{/web/polizas/{clave}(clave=${poliza.clave})}">Ver detalle</a>
+                            <a class="btn btn-primario btn-chico"
+                               th:href="@{/web/polizas/{clave}/editar(clave=${poliza.clave})}">Editar</a>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="estado-vacio" th:if="${paginaPolizas.contenido.isEmpty()}">
+            <p>No se encontraron pólizas con el criterio seleccionado.</p>
+            <a class="btn btn-primario" th:href="@{/web/polizas/nuevo}">Registrar nueva póliza</a>
+        </div>
+
+        <nav class="paginacion"
+             aria-label="Paginación de pólizas"
+             th:if="${paginaPolizas.totalPaginas > 0}">
+            <span class="ayuda"
+                  th:text="'Página ' + (${paginaPolizas.pagina} + 1) + ' de ' + ${paginaPolizas.totalPaginas}">
+                Página 1 de 1
+            </span>
+            <div class="paginacion-botones">
+                <a class="btn btn-secundario btn-chico"
+                   th:classappend="${paginaPolizas.pagina <= 0} ? ' btn-deshabilitado'"
+                   th:href="@{/web/polizas(
+                       tipoFiltro=${tipoFiltro},
+                       curp=${!filtroCurp.isEmpty() ? filtroCurp : null},
+                       tipo=${!filtroTipo.isEmpty() ? filtroTipo : null},
+                       fechaBeneficiario=${!filtroFechaBeneficiario.isEmpty() ? filtroFechaBeneficiario : null},
+                       nombres=${!filtroNombres.isEmpty() ? filtroNombres : null},
+                       primerApellido=${!filtroPrimerApellido.isEmpty() ? filtroPrimerApellido : null},
+                       segundoApellido=${!filtroSegundoApellido.isEmpty() ? filtroSegundoApellido : null},
+                       pagina=${paginaPolizas.pagina > 0 ? paginaPolizas.pagina - 1 : 0},
+                       tamano=${tamanoActual}
+                   )}">Anterior</a>
+
+                <a class="btn btn-secundario btn-chico"
+                   th:classappend="${paginaPolizas.pagina + 1 >= paginaPolizas.totalPaginas} ? ' btn-deshabilitado'"
+                   th:href="@{/web/polizas(
+                       tipoFiltro=${tipoFiltro},
+                       curp=${!filtroCurp.isEmpty() ? filtroCurp : null},
+                       tipo=${!filtroTipo.isEmpty() ? filtroTipo : null},
+                       fechaBeneficiario=${!filtroFechaBeneficiario.isEmpty() ? filtroFechaBeneficiario : null},
+                       nombres=${!filtroNombres.isEmpty() ? filtroNombres : null},
+                       primerApellido=${!filtroPrimerApellido.isEmpty() ? filtroPrimerApellido : null},
+                       segundoApellido=${!filtroSegundoApellido.isEmpty() ? filtroSegundoApellido : null},
+                       pagina=${paginaPolizas.pagina + 1},
+                       tamano=${tamanoActual}
+                   )}">Siguiente</a>
+            </div>
+        </nav>
+    </section>
+</main>
+
+<script>
+    function actualizarCamposFiltro() {
+        var tipo = document.getElementById('tipoFiltro').value;
+        var bloques = document.querySelectorAll('.campo-filtro');
+        bloques.forEach(function (bloque) {
+            var permitidos = bloque.getAttribute('data-filtro').split(' ');
+            var visible = permitidos.indexOf(tipo) !== -1;
+            bloque.style.display = visible ? '' : 'none';
+            var controles = bloque.querySelectorAll('input, select');
+            controles.forEach(function (control) {
+                control.disabled = !visible;
+            });
+        });
+    }
+    actualizarCamposFiltro();
+</script>
+</body>
+</html>

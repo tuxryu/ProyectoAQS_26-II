@@ -31,13 +31,22 @@ build/
 
 ### VS Code ###
 .vscode/
-# Archivos específicos de Linux
+
+# Archivos especificos de Linux / Linux Mint y macOS
 *~
 *.swp
 *.swo
 .directory
 .Trash-*
+.fuse_hidden*
+.nfs*
 .netrwhist
+.DS_Store
+
+# Archivos especificos de Windows
+Thumbs.db
+Desktop.ini
+ehthumbs.db
 
 # Entornos virtuales y dependencias (Node.js, Python, etc.)
 node_modules/
@@ -46,12 +55,28 @@ __pycache__/
 .venv/
 env/
 
-# Logs y archivos temporales
+# Logs, ejecutables sueltos y archivos temporales
+logs/
 *.log
+*.pid
+nohup.out
+*.jar
+*.war
 tmp/
 temp/
 
-# Configuraciones locales que no deben compartirse
+# Configuraciones locales, Azure y llaves privadas que nunca deben subirse
 .env
-.env.local
+.env.*
 config.local.json
+application-local.yml
+application-local.properties
+application-prod.yml
+.azure/
+.ssh/
+*.pem
+*.key
+*.ppk
+*.pub
+*.pfx
+*.p12
