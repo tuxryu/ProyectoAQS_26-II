@@ -1,15 +1,19 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.adapter.out.rest;
 
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.adapter.out.rest.dto.ClienteRemotoDto;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
@@ -26,6 +30,8 @@ public class ClienteSistemaDuenoAdapter {
 
     private static final Logger LOG
             = LoggerFactory.getLogger(ClienteSistemaDuenoAdapter.class);
+
+    private static final Pattern PATRON_ACENTOS = Pattern.compile("\\p{M}");
 
     private static final String RUTA_CON_SEGUNDO_APELLIDO
             = "/cliente/{curp}/{direccion}/{fecha}/{nombres}/{primerApellido}/{segundoApellido}";
@@ -75,31 +81,30 @@ public class ClienteSistemaDuenoAdapter {
     }
 
     /**
-     * Busca clientes en el Sistema Dueno por su nombre y apellidos
-     * (GET /clientes/{nombres}/{primerApellido}[/{segundoApellido}]),
-     * omitiendo registros invalidos de otros equipos.
+     * Busca clientes filtrando el catalogo devuelto por GET /clientes en
+     * memoria (el Sistema Dueno no expone GET /clientes/{nombres}/{apellido} y
+     * responde 404). La coincidencia ignora mayusculas, minusculas y acentos
+     * sobre cada criterio no vacio.
      *
-     * @param nombres nombres del cliente
-     * @param primerApellido primer apellido del cliente
+     * @param nombres nombres del cliente (opcional)
+     * @param primerApellido primer apellido del cliente (opcional)
      * @param segundoApellido segundo apellido del cliente (opcional)
-     * @return lista inmutable de entidades {@link Cliente} validas
+     * @return lista inmutable de entidades {@link Cliente} coincidentes
      */
     public List<Cliente> buscarPorNombre(
             String nombres, String primerApellido, String segundoApellido) {
-        validarSegmentoObligatorio(nombres, "El nombre");
-        validarSegmentoObligatorio(primerApellido, "El primer apellido");
-        if (segundoApellido == null || segundoApellido.trim().isEmpty()) {
-            return consultarLista(
-                    "/clientes/{nombres}/{primerApellido}",
-                    nombres,
-                    primerApellido);
+        String nombresFiltro = validarCriterioOpcional(nombres, "El nombre");
+        String primerFiltro = validarCriterioOpcional(primerApellido, "El primer apellido");
+        String segundoFiltro = validarCriterioOpcional(segundoApellido, "El segundo apellido");
+        if (nombresFiltro == null && primerFiltro == null && segundoFiltro == null) {
+            throw new IllegalArgumentException(
+                    "Debe indicar al menos un nombre o apellido para buscar.");
         }
-        validarSinDiagonales(segundoApellido, "El segundo apellido");
-        return consultarLista(
-                "/clientes/{nombres}/{primerApellido}/{segundoApellido}",
-                nombres,
-                primerApellido,
-                segundoApellido);
+        return listarTodos().stream()
+                .filter(cliente -> coincideCampo(cliente.getNombres(), nombresFiltro)
+                        && coincideCampo(cliente.getPrimerApellido(), primerFiltro)
+                        && coincideCampo(cliente.getSegundoApellido(), segundoFiltro))
+                .toList();
     }
 
     /**
@@ -212,31 +217,85 @@ public class ClienteSistemaDuenoAdapter {
     }
 
     private List<Cliente> consultarLista(String plantilla, Object... variables) {
-        ClienteRemotoDto[] respuesta = TraductorExcepcionesSistemaDueno.ejecutar(
-                () -> restClient.get()
-                        .uri(plantilla, variables)
-                        .retrieve()
-                        .body(ClienteRemotoDto[].class));
-        if (respuesta == null || respuesta.length == 0) {
+        List<?> filas;
+        try {
+            filas = TraductorExcepcionesSistemaDueno.ejecutar(
+                    () -> restClient.get()
+                            .uri(plantilla, variables)
+                            .retrieve()
+                            .body(List.class));
+        } catch (RestClientException ex) {
+            throw new SistemaDuenoRechazoException(
+                    "El Sistema Dueno devolvio una respuesta ilegible al listar clientes.", ex);
+        }
+        if (filas == null || filas.isEmpty()) {
             return List.of();
         }
-        List<Cliente> clientes = new ArrayList<>(respuesta.length);
-        for (ClienteRemotoDto dto : Arrays.asList(respuesta)) {
-            agregarSiEsValido(clientes, dto);
+        List<Cliente> clientes = new ArrayList<>(filas.size());
+        for (Object elemento : filas) {
+            agregarSiEsValido(clientes, elemento);
         }
         return List.copyOf(clientes);
     }
 
-    private void agregarSiEsValido(List<Cliente> clientes, ClienteRemotoDto dto) {
-        if (dto == null || esRespuestaVacia(dto)) {
+    private void agregarSiEsValido(List<Cliente> clientes, Object elemento) {
+        if (!(elemento instanceof Map<?, ?> fila)) {
+            LOG.warn("Se omite un cliente invalido del Sistema Dueno: {}", elemento);
             return;
         }
         try {
+            ClienteRemotoDto dto = convertirMapaADto(fila);
+            if (esRespuestaVacia(dto)) {
+                return;
+            }
             clientes.add(convertirADominio(dto));
         } catch (RuntimeException ex) {
             LOG.warn("Se omite un cliente invalido del Sistema Dueno: {}",
                     ex.getMessage());
         }
+    }
+
+    private ClienteRemotoDto convertirMapaADto(Map<?, ?> fila) {
+        return new ClienteRemotoDto(
+                leerTexto(fila.get("curp")),
+                leerTexto(fila.get("nombres")),
+                leerTexto(fila.get("primerApellido")),
+                leerTexto(fila.get("segundoApellido")),
+                leerTexto(fila.get("direccion")),
+                leerTexto(fila.get("fechaNacimiento")));
+    }
+
+    private String leerTexto(Object valor) {
+        return valor != null ? valor.toString() : null;
+    }
+
+    private String validarCriterioOpcional(String valor, String campo) {
+        if (valor == null) {
+            return null;
+        }
+        String limpio = valor.trim();
+        if (limpio.isEmpty()) {
+            return null;
+        }
+        validarSinDiagonales(limpio, campo);
+        return normalizarParaBusqueda(limpio);
+    }
+
+    private boolean coincideCampo(String valorCliente, String criterioNormalizado) {
+        if (criterioNormalizado == null) {
+            return true;
+        }
+        if (valorCliente == null || valorCliente.trim().isEmpty()) {
+            return false;
+        }
+        return normalizarParaBusqueda(valorCliente).contains(criterioNormalizado);
+    }
+
+    private String normalizarParaBusqueda(String texto) {
+        String descompuesto = Normalizer.normalize(texto.trim(), Normalizer.Form.NFD);
+        return PATRON_ACENTOS.matcher(descompuesto)
+                .replaceAll("")
+                .toLowerCase(Locale.ROOT);
     }
 
     private Cliente convertirADominio(ClienteRemotoDto dto) {

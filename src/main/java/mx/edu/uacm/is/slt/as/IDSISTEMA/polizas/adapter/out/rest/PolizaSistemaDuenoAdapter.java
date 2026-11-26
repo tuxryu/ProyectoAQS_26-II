@@ -1,6 +1,7 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.adapter.out.rest;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,6 +21,7 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.out.PolizaRemota
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http.FechasSistemaDueno;
 
 /**
  * Adaptador de salida REST hacia el Sistema Dueno para las consultas GET y las
@@ -106,6 +108,22 @@ public class PolizaSistemaDuenoAdapter implements PolizaRemotaPort {
                     "El tipo de poliza debe estar entre 0 y 2, se recibio " + tipo + ".");
         }
         return consultarLista("/polizas/{tipo}", tipo);
+    }
+
+    /**
+     * Lista las polizas que tienen un beneficiario nacido en la fecha indicada
+     * (GET /polizas/b/{fecha}).
+     *
+     * @param fechaNacimiento fecha de nacimiento del beneficiario
+     * @return polizas validas; lista vacia si no hay resultados
+     */
+    @Override
+    public List<Poliza> buscarPorFechaNacimientoBeneficiario(LocalDate fechaNacimiento) {
+        Objects.requireNonNull(
+                fechaNacimiento,
+                "La fecha de nacimiento del beneficiario es obligatoria.");
+        String fechaRuta = FechasSistemaDueno.formatearParaRuta(fechaNacimiento);
+        return consultarLista("/polizas/b/{fecha}", fechaRuta);
     }
 
     /**

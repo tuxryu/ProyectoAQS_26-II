@@ -90,8 +90,9 @@
                     <input id="fechaNacimiento"
                            type="date"
                            th:field="*{fechaNacimiento}"
+                           th:attr="min=${fechaMinimaBeneficiario},max=${fechaMaximaBeneficiario}"
                            required>
-                    <span class="ayuda">Formato AAAA-MM-DD.</span>
+                    <span class="ayuda">Formato AAAA-MM-DD. Máximo 100 años de antigüedad y sin fechas futuras (se permiten menores de edad).</span>
                 </div>
 
                 <div class="form-grupo">
@@ -104,16 +105,20 @@
                            placeholder="Ej. 50"
                            required>
                     <span class="ayuda"
-                          th:text="${(polizaConsultada != null && polizaConsultada)
-                              ? 'Entero entre 1 y ' + porcentajeDisponible + '% disponible.'
-                              : 'Valor entero entre 1 y 100.'}">
+                          th:classappend="${cupoCompleto != null && cupoCompleto} ? ' ayuda-error'"
+                          th:text="${(cupoCompleto != null && cupoCompleto)
+                              ? 'Sin porcentaje disponible: esta póliza ya alcanzó el 100% asignado (0% disponible).'
+                              : ((polizaConsultada != null && polizaConsultada)
+                                  ? 'Entero entre 1 y ' + porcentajeDisponible + '% disponible.'
+                                  : 'Valor entero entre 1 y 100.')}">
                         Valor entero entre 1 y 100.
                     </span>
                 </div>
             </div>
 
             <div class="acciones-formulario">
-                <button type="submit"
+                <button id="btnRegistrarBeneficiario"
+                        type="submit"
                         class="btn btn-primario"
                         th:disabled="${cupoCompleto != null && cupoCompleto}">
                     Registrar beneficiario
@@ -123,8 +128,31 @@
                        ? @{/web/beneficiarios(clavePoliza=${clavePolizaBuscada})}
                        : @{/web/beneficiarios}">Cancelar</a>
             </div>
+            <p id="avisoCupoCompleto"
+               class="ayuda ayuda-error"
+               th:if="${cupoCompleto != null && cupoCompleto}">
+                No se puede registrar otro beneficiario en esta póliza porque ya alcanzó el 100% de beneficios asignados (0% disponible). Cambia la clave de póliza si deseas registrar en otra póliza.
+            </p>
         </form>
     </section>
 </main>
+<script th:if="${cupoCompleto != null && cupoCompleto}" th:inline="javascript">
+    (function () {
+        var claveOriginal = /*[[${clavePolizaBuscada}]]*/ '';
+        var inputClave = document.getElementById('clavePoliza');
+        var btnRegistrar = document.getElementById('btnRegistrarBeneficiario');
+        var aviso = document.getElementById('avisoCupoCompleto');
+        if (!inputClave || !btnRegistrar) {
+            return;
+        }
+        inputClave.addEventListener('input', function () {
+            var mismaPoliza = inputClave.value.trim() === claveOriginal;
+            btnRegistrar.disabled = mismaPoliza;
+            if (aviso) {
+                aviso.style.display = mismaPoliza ? '' : 'none';
+            }
+        });
+    })();
+</script>
 </body>
 </html>

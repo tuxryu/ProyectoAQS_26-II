@@ -2,8 +2,10 @@ package mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.http;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
@@ -15,6 +17,8 @@ public final class FechasSistemaDueno {
 
     public static final ZoneId ZONA_CDMX = ZoneId.of("America/Mexico_City");
 
+    private static final LocalTime MEDIANOCHE_UTC_MENOS_SEIS = LocalTime.of(6, 0);
+
     private static final DateTimeFormatter FORMATO_FECHA_RUTA = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private FechasSistemaDueno() {
@@ -22,8 +26,10 @@ public final class FechasSistemaDueno {
 
     /**
      * Convierte una cadena de fecha o timestamp ISO-8601 devuelta por el
-     * Sistema Dueno (por ejemplo 1990-01-01T06:00:00.000+00:00 o
-     * 1920-01-01T06:36:36.000+00:00) a LocalDate en zona America/Mexico_City.
+     * Sistema Dueno (por ejemplo 1990-01-01T06:00:00.000+00:00,
+     * 1885-05-25T06:00:00.000+00:00 o 1920-01-01T06:36:36.000+00:00) a
+     * LocalDate en zona America/Mexico_City sin desplazar un dia atras las
+     * fechas anteriores a 1922 almacenadas en medianoche UTC-6 fijo.
      *
      * @param valor cadena de texto con la fecha o timestamp del servidor remoto
      * @return fecha local correspondiente en Ciudad de Mexico
@@ -38,14 +44,20 @@ public final class FechasSistemaDueno {
             return LocalDate.parse(limpio, FORMATO_FECHA_RUTA);
         }
         try {
-            return OffsetDateTime.parse(limpio)
-                    .atZoneSameInstant(ZONA_CDMX)
-                    .toLocalDate();
+            OffsetDateTime fechaUtc = OffsetDateTime.parse(limpio)
+                    .withOffsetSameInstant(ZoneOffset.UTC);
+            return resolverFechaLocalCdmx(fechaUtc);
         } catch (DateTimeParseException ex) {
-            return Instant.parse(limpio)
-                    .atZone(ZONA_CDMX)
-                    .toLocalDate();
+            OffsetDateTime fechaUtc = Instant.parse(limpio).atOffset(ZoneOffset.UTC);
+            return resolverFechaLocalCdmx(fechaUtc);
         }
+    }
+
+    private static LocalDate resolverFechaLocalCdmx(OffsetDateTime fechaUtc) {
+        if (MEDIANOCHE_UTC_MENOS_SEIS.equals(fechaUtc.toLocalTime())) {
+            return fechaUtc.toLocalDate();
+        }
+        return fechaUtc.atZoneSameInstant(ZONA_CDMX).toLocalDate();
     }
 
     /**

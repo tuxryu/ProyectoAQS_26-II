@@ -86,6 +86,7 @@ public class BeneficiarioService
             throw new SolicitudInvalidaException(
                     "Los datos del beneficiario son obligatorios.");
         }
+        Beneficiario.validarFechaNacimientoParaRegistro(beneficiario.getFechaNacimiento());
         UUID clavePoliza = beneficiario.getClavePoliza();
         exigirPolizaExistente(clavePoliza);
 
@@ -106,11 +107,12 @@ public class BeneficiarioService
                 .mapToInt(Beneficiario::getPorcentaje)
                 .sum();
         if (sumaActual + beneficiario.getPorcentaje() > PORCENTAJE_MAXIMO_POLIZA) {
+            int disponible = Math.max(0, PORCENTAJE_MAXIMO_POLIZA - sumaActual);
             throw new ReglaNegocioException(
-                    "La suma de porcentajes de los beneficiarios para la poliza "
-                    + clavePoliza + " excede el 100% (actual: "
-                    + sumaActual + "%, solicitado: "
-                    + beneficiario.getPorcentaje() + "%).");
+                    "No es posible agregar el beneficiario porque la suma de porcentajes "
+                    + "de la poliza " + clavePoliza + " excede el 100% (asignado actual: "
+                    + sumaActual + "%, solicitado: " + beneficiario.getPorcentaje()
+                    + "%, disponible: " + disponible + "%).");
         }
 
         beneficiarioSistemaDuenoPort.guardar(beneficiario);
