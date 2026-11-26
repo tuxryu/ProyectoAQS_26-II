@@ -106,6 +106,12 @@ class ClienteSistemaDuenoAdapterTest {
                 LocalDate.of(2003, 7, 15),
                 FechasSistemaDueno.convertirALocalDate("2003-07-15T05:00:00.000+00:00"));
         assertEquals(
+                LocalDate.of(1885, 5, 25),
+                FechasSistemaDueno.convertirALocalDate("1885-05-25T06:00:00.000+00:00"));
+        assertEquals(
+                LocalDate.of(1925, 12, 15),
+                FechasSistemaDueno.convertirALocalDate("1925-12-15T07:00:00.000+00:00"));
+        assertEquals(
                 "1990-01-01",
                 FechasSistemaDueno.formatearParaRuta(LocalDate.of(1990, 1, 1)));
     }
