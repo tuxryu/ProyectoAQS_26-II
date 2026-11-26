@@ -9,16 +9,22 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.BajaBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ConsultarBeneficiarioUseCasePort;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ModificacionBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.RegistrarBeneficiarioUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.RecursoNoEncontradoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.ConflictoDatosException;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,6 +47,12 @@ class BeneficiarioControllerTest {
 
     @MockitoBean
     private ConsultarBeneficiarioUseCasePort consultarBeneficiarioUseCasePort;
+
+    @MockitoBean
+    private ModificacionBeneficiarioUseCase modificacionBeneficiarioUseCase;
+
+    @MockitoBean
+    private BajaBeneficiarioUseCase bajaBeneficiarioUseCase;
 
     private Beneficiario crearBeneficiarioMuestra() {
         return new Beneficiario(
@@ -176,5 +188,66 @@ class BeneficiarioControllerTest {
                 .content(cuerpo))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.status").value(422));
+    }
+
+    @Test
+    void debeResponder200AlActualizarBeneficiarioIndividual() throws Exception {
+        Beneficiario actualizado = new Beneficiario(
+                "Mario",
+                "Prueba",
+                "Lopez",
+                LocalDate.of(2000, 2, 2),
+                CLAVE_EXISTENTE,
+                45);
+        when(modificacionBeneficiarioUseCase.actualizar(
+                eq(CLAVE_EXISTENTE),
+                eq("Mario"),
+                eq("Prueba"),
+                eq("Lopez"),
+                eq(LocalDate.of(2000, 2, 2)),
+                any(Beneficiario.class)))
+                .thenReturn(actualizado);
+
+        String cuerpo = """
+                {
+                  "nombres": "Mario",
+                  "primerApellido": "Prueba",
+                  "segundoApellido": "Lopez",
+                  "fechaNacimiento": "2000-02-02",
+                  "porcentaje": 45
+                }
+                """;
+
+        mockMvc.perform(put("/polizas/{clave}/beneficiarios", CLAVE_EXISTENTE)
+                .param("nombres", "Mario")
+                .param("primerApellido", "Prueba")
+                .param("segundoApellido", "Lopez")
+                .param("fechaNacimiento", "2000-02-02")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(cuerpo))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.porcentaje").value(45));
+    }
+
+    @Test
+    void debeResponder204AlEliminarConConfirmacionY400SinConfirmar() throws Exception {
+        doNothing().when(bajaBeneficiarioUseCase).eliminar(
+                CLAVE_EXISTENTE, "Mario", "Prueba", "Lopez", LocalDate.of(2000, 2, 2));
+
+        mockMvc.perform(delete("/polizas/{clave}/beneficiarios", CLAVE_EXISTENTE)
+                .param("nombres", "Mario")
+                .param("primerApellido", "Prueba")
+                .param("segundoApellido", "Lopez")
+                .param("fechaNacimiento", "2000-02-02"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+
+        mockMvc.perform(delete("/polizas/{clave}/beneficiarios", CLAVE_EXISTENTE)
+                .param("nombres", "Mario")
+                .param("primerApellido", "Prueba")
+                .param("segundoApellido", "Lopez")
+                .param("fechaNacimiento", "2000-02-02")
+                .param("confirmar", "true"))
+                .andExpect(status().isNoContent());
     }
 }

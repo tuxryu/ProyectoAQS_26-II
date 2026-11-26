@@ -4,7 +4,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,15 +18,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.AltaBeneficiarioUseCase;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.BajaBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ConsultaBeneficiarioUseCase;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ModificacionBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 
 /**
  * Controlador web Thymeleaf de Capa 4 para el modulo de beneficiarios: listado
- * por poliza con suma actual y porcentaje disponible hasta 100%, alta vinculada
- * y busqueda individual. Invoca unicamente {@link AltaBeneficiarioUseCase} y
- * {@link ConsultaBeneficiarioUseCase}.
+ * por poliza con suma actual y porcentaje disponible hasta 100%, alta
+ * vinculada, busqueda individual, modificacion y baja individual mediante
+ * operaciones compuestas. Invoca unicamente puertos de entrada.
  */
 @Controller
 @RequestMapping("/web/beneficiarios")
@@ -42,6 +46,10 @@ public class BeneficiarioViewController {
 
     private static final String ATRIBUTO_FORMULARIO = "formulario";
 
+    private static final String ATRIBUTO_MODO_EDICION = "modoEdicion";
+
+    private static final String ATRIBUTO_PORCENTAJE_MAXIMO_EDICION = "porcentajeMaximoEdicion";
+
     private static final String ATRIBUTO_CLAVE_POLIZA = "clavePolizaBuscada";
 
     private static final String ATRIBUTO_BENEFICIARIOS = "beneficiarios";
@@ -58,9 +66,12 @@ public class BeneficiarioViewController {
 
     private final ConsultaBeneficiarioUseCase consultaBeneficiarioUseCase;
 
+    private final ModificacionBeneficiarioUseCase modificacionBeneficiarioUseCase;
+
+    private final BajaBeneficiarioUseCase bajaBeneficiarioUseCase;
+
     /**
-     * Crea el controlador de vistas de beneficiarios inyectando unicamente los
-     * puertos de entrada del modulo.
+     * Constructor compatible con pruebas que inyectan solo alta y consulta.
      *
      * @param altaBeneficiarioUseCase puerto de alta de beneficiario
      * @param consultaBeneficiarioUseCase puerto de consulta de beneficiarios
@@ -68,12 +79,42 @@ public class BeneficiarioViewController {
     public BeneficiarioViewController(
             AltaBeneficiarioUseCase altaBeneficiarioUseCase,
             ConsultaBeneficiarioUseCase consultaBeneficiarioUseCase) {
+        this(
+                altaBeneficiarioUseCase,
+                consultaBeneficiarioUseCase,
+                Optional.empty(),
+                Optional.empty());
+    }
+
+    /**
+     * Crea el controlador de vistas de beneficiarios inyectando unicamente los
+     * puertos de entrada del modulo.
+     *
+     * @param altaBeneficiarioUseCase puerto de alta de beneficiario
+     * @param consultaBeneficiarioUseCase puerto de consulta de beneficiarios
+     * @param modificacionBeneficiarioUseCase puerto de modificacion compuesta
+     * @param bajaBeneficiarioUseCase puerto de baja compuesta
+     */
+    @Autowired
+    public BeneficiarioViewController(
+            AltaBeneficiarioUseCase altaBeneficiarioUseCase,
+            ConsultaBeneficiarioUseCase consultaBeneficiarioUseCase,
+            Optional<ModificacionBeneficiarioUseCase> modificacionBeneficiarioUseCase,
+            Optional<BajaBeneficiarioUseCase> bajaBeneficiarioUseCase) {
         this.altaBeneficiarioUseCase = Objects.requireNonNull(
                 altaBeneficiarioUseCase,
                 "El puerto AltaBeneficiarioUseCase es obligatorio.");
         this.consultaBeneficiarioUseCase = Objects.requireNonNull(
                 consultaBeneficiarioUseCase,
                 "El puerto ConsultaBeneficiarioUseCase es obligatorio.");
+        this.modificacionBeneficiarioUseCase = Objects.requireNonNull(
+                modificacionBeneficiarioUseCase,
+                "El Optional de ModificacionBeneficiarioUseCase no puede ser nulo.")
+                .orElse(null);
+        this.bajaBeneficiarioUseCase = Objects.requireNonNull(
+                bajaBeneficiarioUseCase,
+                "El Optional de BajaBeneficiarioUseCase no puede ser nulo.")
+                .orElse(null);
     }
 
     /**
@@ -175,6 +216,7 @@ public class BeneficiarioViewController {
                 ? BeneficiarioFormulario.paraPoliza(claveNorm)
                 : new BeneficiarioFormulario();
         model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
+        model.addAttribute(ATRIBUTO_MODO_EDICION, false);
         if (claveNorm != null) {
             cargarResumenOpcionalParaFormulario(claveNorm, model);
         }
@@ -207,12 +249,159 @@ public class BeneficiarioViewController {
             return "redirect:/web/beneficiarios";
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
+            model.addAttribute(ATRIBUTO_MODO_EDICION, false);
             String claveNorm = normalizarOpcional(formulario.getClavePoliza());
             if (claveNorm != null) {
                 cargarResumenSilenciosoParaFormulario(claveNorm, model);
             }
             model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
             return VISTA_FORMULARIO;
+        }
+    }
+
+    /**
+     * Muestra el formulario de edicion precargado con los datos del
+     * beneficiario identificado por su llave compuesta.
+     *
+     * @param clavePoliza clave UUID de la poliza
+     * @param nombres nombres actuales del beneficiario
+     * @param primerApellido primer apellido actual del beneficiario
+     * @param segundoApellido segundo apellido actual (opcional)
+     * @param fechaNacimiento fecha de nacimiento actual (AAAA-MM-DD)
+     * @param model modelo para la vista
+     * @param redirectAttributes atributos flash si ocurre error al cargar
+     * @return plantilla del formulario en modo edicion o redireccion al listado
+     */
+    @GetMapping("/editar")
+    public String mostrarFormularioEdicion(
+            @RequestParam String clavePoliza,
+            @RequestParam String nombres,
+            @RequestParam String primerApellido,
+            @RequestParam(required = false) String segundoApellido,
+            @RequestParam String fechaNacimiento,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            UUID uuidPoliza = parsearUuid(clavePoliza);
+            LocalDate fecha = parsearFecha(fechaNacimiento);
+            Beneficiario existente = consultaBeneficiarioUseCase.consultarPorDatos(
+                    uuidPoliza,
+                    limpiarObligatorio(nombres),
+                    limpiarObligatorio(primerApellido),
+                    normalizarOpcional(segundoApellido),
+                    fecha);
+            model.addAttribute(ATRIBUTO_FORMULARIO, BeneficiarioFormulario.desde(existente));
+            model.addAttribute(ATRIBUTO_MODO_EDICION, true);
+            cargarResumenParaEdicion(uuidPoliza.toString(), existente.getPorcentaje(), model);
+            return VISTA_FORMULARIO;
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute(
+                    ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
+            if (clavePoliza != null && !clavePoliza.trim().isEmpty()) {
+                redirectAttributes.addAttribute("clavePoliza", clavePoliza.trim());
+            }
+            return "redirect:/web/beneficiarios";
+        }
+    }
+
+    /**
+     * Procesa la modificacion de un beneficiario mediante operacion compuesta.
+     *
+     * @param formulario datos originales y modificados del formulario HTML
+     * @param model modelo para re-renderizar en caso de error
+     * @param redirectAttributes atributos flash para la redireccion exitosa
+     * @return redireccion al listado de la poliza o el formulario con alerta
+     */
+    @PostMapping("/editar")
+    public String actualizar(
+            @ModelAttribute("formulario") BeneficiarioFormulario formulario,
+            Model model,
+            RedirectAttributes redirectAttributes) {
+        try {
+            UUID clavePoliza = parsearUuid(formulario.getClavePoliza());
+            LocalDate fechaOriginal = parsearFecha(formulario.getFechaNacimientoOriginal());
+            Beneficiario actualizado = construirBeneficiario(formulario);
+            Beneficiario guardado = modificacionBeneficiarioUseCase.actualizar(
+                    clavePoliza,
+                    limpiarObligatorio(formulario.getNombresOriginales()),
+                    limpiarObligatorio(formulario.getPrimerApellidoOriginal()),
+                    normalizarOpcional(formulario.getSegundoApellidoOriginal()),
+                    fechaOriginal,
+                    actualizado);
+            redirectAttributes.addFlashAttribute(
+                    ATRIBUTO_ALERTA,
+                    AlertaWeb.exito(
+                            AlertaWeb.tituloOperacionExitosa(),
+                            "Beneficiario actualizado correctamente con "
+                                    + guardado.getPorcentaje() + "% asignado."));
+            redirectAttributes.addAttribute("clavePoliza", guardado.getClavePoliza().toString());
+            return "redirect:/web/beneficiarios";
+        } catch (RuntimeException ex) {
+            model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
+            model.addAttribute(ATRIBUTO_MODO_EDICION, true);
+            String claveNorm = normalizarOpcional(formulario.getClavePoliza());
+            int porcentajeOriginal = parsearPorcentajeSeguro(formulario.getPorcentajeOriginal());
+            if (claveNorm != null) {
+                cargarResumenParaEdicion(claveNorm, porcentajeOriginal, model);
+            }
+            model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
+            return VISTA_FORMULARIO;
+        }
+    }
+
+    /**
+     * Procesa la baja individual de un beneficiario mediante operacion
+     * compuesta conservando la poliza y al resto de beneficiarios.
+     *
+     * @param clavePoliza clave UUID de la poliza
+     * @param nombres nombres del beneficiario a eliminar
+     * @param primerApellido primer apellido del beneficiario
+     * @param segundoApellido segundo apellido (opcional)
+     * @param fechaNacimiento fecha de nacimiento (AAAA-MM-DD)
+     * @param origen vista de origen opcional ({@code poliza} para regresar al detalle)
+     * @param redirectAttributes atributos flash con resultado
+     * @return redireccion al listado de beneficiarios o al detalle de la poliza
+     */
+    @PostMapping("/eliminar")
+    public String eliminar(
+            @RequestParam String clavePoliza,
+            @RequestParam String nombres,
+            @RequestParam String primerApellido,
+            @RequestParam(required = false) String segundoApellido,
+            @RequestParam String fechaNacimiento,
+            @RequestParam(required = false) String origen,
+            RedirectAttributes redirectAttributes) {
+        String claveLimpia = clavePoliza != null ? clavePoliza.trim() : "";
+        try {
+            UUID uuidPoliza = parsearUuid(claveLimpia);
+            LocalDate fecha = parsearFecha(fechaNacimiento);
+            bajaBeneficiarioUseCase.eliminar(
+                    uuidPoliza,
+                    limpiarObligatorio(nombres),
+                    limpiarObligatorio(primerApellido),
+                    normalizarOpcional(segundoApellido),
+                    fecha);
+            redirectAttributes.addFlashAttribute(
+                    ATRIBUTO_ALERTA,
+                    AlertaWeb.exito(
+                            AlertaWeb.tituloOperacionExitosa(),
+                            "Beneficiario eliminado correctamente. "
+                                    + "La poliza y los demas beneficiarios se conservaron."));
+            if ("poliza".equals(origen)) {
+                return "redirect:/web/polizas/" + uuidPoliza;
+            }
+            redirectAttributes.addAttribute("clavePoliza", uuidPoliza.toString());
+            return "redirect:/web/beneficiarios";
+        } catch (RuntimeException ex) {
+            redirectAttributes.addFlashAttribute(
+                    ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
+            if ("poliza".equals(origen) && !claveLimpia.isEmpty()) {
+                return "redirect:/web/polizas/" + claveLimpia;
+            }
+            if (!claveLimpia.isEmpty()) {
+                redirectAttributes.addAttribute("clavePoliza", claveLimpia);
+            }
+            return "redirect:/web/beneficiarios";
         }
     }
 
@@ -275,6 +464,35 @@ public class BeneficiarioViewController {
             cargarResumenPoliza(model, uuidPoliza.toString(), actuales);
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_POLIZA_CONSULTADA, false);
+        }
+    }
+
+    private void cargarResumenParaEdicion(
+            String clavePoliza, int porcentajeOriginal, Model model) {
+        try {
+            UUID uuidPoliza = parsearUuid(clavePoliza);
+            List<Beneficiario> actuales
+                    = consultaBeneficiarioUseCase.listarPorPoliza(uuidPoliza);
+            cargarResumenPoliza(model, uuidPoliza.toString(), actuales);
+            int suma = calcularSumaPorcentajes(actuales);
+            int sumaOtros = Math.max(0, suma - porcentajeOriginal);
+            int maximoEdicion = Math.max(1, Math.min(PORCENTAJE_MAXIMO,
+                    PORCENTAJE_MAXIMO - sumaOtros));
+            model.addAttribute(ATRIBUTO_PORCENTAJE_MAXIMO_EDICION, maximoEdicion);
+        } catch (RuntimeException ex) {
+            model.addAttribute(ATRIBUTO_POLIZA_CONSULTADA, false);
+            model.addAttribute(ATRIBUTO_PORCENTAJE_MAXIMO_EDICION, PORCENTAJE_MAXIMO);
+        }
+    }
+
+    private int parsearPorcentajeSeguro(String valor) {
+        if (valor == null || valor.trim().isEmpty()) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(valor.trim());
+        } catch (NumberFormatException ex) {
+            return 0;
         }
     }
 

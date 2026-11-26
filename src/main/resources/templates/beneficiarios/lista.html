@@ -114,6 +114,25 @@
                                    segundoApellido=${ben.segundoApellido},
                                    fechaNacimiento=${ben.fechaNacimiento}
                                )}">Ver detalle</a>
+                            <a class="btn btn-primario btn-chico"
+                               th:href="@{/web/beneficiarios/editar(
+                                   clavePoliza=${ben.clavePoliza},
+                                   nombres=${ben.nombres},
+                                   primerApellido=${ben.primerApellido},
+                                   segundoApellido=${ben.segundoApellido},
+                                   fechaNacimiento=${ben.fechaNacimiento}
+                               )}">Editar</a>
+                            <form method="post"
+                                  th:action="@{/web/beneficiarios/eliminar}"
+                                  onsubmit="return confirm('¿Estás seguro de eliminar este beneficiario? La póliza y los demás beneficiarios se conservarán.');"
+                                  style="display: inline-block;">
+                                <input type="hidden" name="clavePoliza" th:value="${ben.clavePoliza}">
+                                <input type="hidden" name="nombres" th:value="${ben.nombres}">
+                                <input type="hidden" name="primerApellido" th:value="${ben.primerApellido}">
+                                <input type="hidden" name="segundoApellido" th:value="${ben.segundoApellido != null ? ben.segundoApellido : ''}">
+                                <input type="hidden" name="fechaNacimiento" th:value="${ben.fechaNacimiento}">
+                                <button type="submit" class="btn btn-peligro btn-chico">Eliminar</button>
+                            </form>
                         </div>
                     </td>
                 </tr>
