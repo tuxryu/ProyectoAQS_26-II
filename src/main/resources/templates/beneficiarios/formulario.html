@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Alta de Beneficiario')}"></head>
+<head th:replace="~{fragments/layout :: head(${modoEdicion != null && modoEdicion ? 'Modificación de Beneficiario' : 'Alta de Beneficiario'})}"></head>
 <body>
 <header th:replace="~{fragments/layout :: navbar('beneficiarios')}"></header>
 
 <main class="contenedor">
     <div class="encabezado-pagina">
         <div>
-            <h1>Alta de Beneficiario</h1>
-            <p class="subtitulo">Registra un nuevo beneficiario vinculado a una póliza cuidando que la suma no exceda el 100%.</p>
+            <h1 th:text="${modoEdicion != null && modoEdicion ? 'Modificación de Beneficiario' : 'Alta de Beneficiario'}">Alta de Beneficiario</h1>
+            <p class="subtitulo"
+               th:text="${modoEdicion != null && modoEdicion
+                   ? 'Actualiza los datos o el porcentaje del beneficiario conservando la póliza y al resto de beneficiarios.'
+                   : 'Registra un nuevo beneficiario vinculado a una póliza cuidando que la suma no exceda el 100%.'}">
+                Registra un nuevo beneficiario vinculado a una póliza cuidando que la suma no exceda el 100%.
+            </p>
         </div>
         <div class="acciones-cabecera">
             <a class="btn btn-secundario"
@@ -34,7 +39,7 @@
                      th:text="${porcentajeDisponible} + '%'">100%</div>
             </div>
         </div>
-        <p class="ayuda" th:if="${cupoCompleto}">
+        <p class="ayuda" th:if="${cupoCompleto && (modoEdicion == null || !modoEdicion)}">
             Esta póliza ya alcanzó el 100% asignado; no es posible agregar otro beneficiario sin rebasar el tope.
         </p>
     </section>
@@ -43,16 +48,25 @@
         <h2>Datos del beneficiario</h2>
         <form method="post"
               th:object="${formulario}"
-              th:action="@{/web/beneficiarios/nuevo}">
+              th:action="${modoEdicion != null && modoEdicion}
+                  ? @{/web/beneficiarios/editar}
+                  : @{/web/beneficiarios/nuevo}">
+            <input type="hidden" th:if="${modoEdicion != null && modoEdicion}" th:field="*{nombresOriginales}">
+            <input type="hidden" th:if="${modoEdicion != null && modoEdicion}" th:field="*{primerApellidoOriginal}">
+            <input type="hidden" th:if="${modoEdicion != null && modoEdicion}" th:field="*{segundoApellidoOriginal}">
+            <input type="hidden" th:if="${modoEdicion != null && modoEdicion}" th:field="*{fechaNacimientoOriginal}">
+            <input type="hidden" th:if="${modoEdicion != null && modoEdicion}" th:field="*{porcentajeOriginal}">
             <div class="form-grid">
                 <div class="form-grupo ancho-completo">
                     <label for="clavePoliza">Clave de Póliza (UUID) *</label>
                     <input id="clavePoliza"
                            type="text"
                            th:field="*{clavePoliza}"
+                           th:readonly="${modoEdicion != null && modoEdicion}"
                            placeholder="Ej. 550e8400-e29b-41d4-a716-446655440000"
                            required>
-                    <span class="ayuda">La póliza debe existir previamente en el Sistema Dueño.</span>
+                    <span class="ayuda" th:if="${modoEdicion == null || !modoEdicion}">La póliza debe existir previamente en el Sistema Dueño.</span>
+                    <span class="ayuda" th:if="${modoEdicion != null && modoEdicion}">La clave de póliza no se modifica; si cambias nombre, apellidos o fecha, se ejecutará la operación compuesta conservando la póliza y los demás beneficiarios.</span>
                 </div>
 
                 <div class="form-grupo">
@@ -101,16 +115,20 @@
                            type="number"
                            th:field="*{porcentaje}"
                            min="1"
-                           th:max="${(polizaConsultada != null && polizaConsultada && porcentajeDisponible > 0) ? porcentajeDisponible : 100}"
+                           th:max="${(modoEdicion != null && modoEdicion && porcentajeMaximoEdicion != null)
+                               ? porcentajeMaximoEdicion
+                               : ((polizaConsultada != null && polizaConsultada && porcentajeDisponible > 0) ? porcentajeDisponible : 100)}"
                            placeholder="Ej. 50"
                            required>
                     <span class="ayuda"
-                          th:classappend="${cupoCompleto != null && cupoCompleto} ? ' ayuda-error'"
-                          th:text="${(cupoCompleto != null && cupoCompleto)
-                              ? 'Sin porcentaje disponible: esta póliza ya alcanzó el 100% asignado (0% disponible).'
-                              : ((polizaConsultada != null && polizaConsultada)
-                                  ? 'Entero entre 1 y ' + porcentajeDisponible + '% disponible.'
-                                  : 'Valor entero entre 1 y 100.')}">
+                          th:classappend="${(modoEdicion == null || !modoEdicion) && cupoCompleto != null && cupoCompleto} ? ' ayuda-error'"
+                          th:text="${(modoEdicion != null && modoEdicion && porcentajeMaximoEdicion != null)
+                              ? 'Entero entre 1 y ' + porcentajeMaximoEdicion + '% permitido para este beneficiario.'
+                              : (((modoEdicion == null || !modoEdicion) && cupoCompleto != null && cupoCompleto)
+                                  ? 'Sin porcentaje disponible: esta póliza ya alcanzó el 100% asignado (0% disponible).'
+                                  : ((polizaConsultada != null && polizaConsultada)
+                                      ? 'Entero entre 1 y ' + porcentajeDisponible + '% disponible.'
+                                      : 'Valor entero entre 1 y 100.'))}">
                         Valor entero entre 1 y 100.
                     </span>
                 </div>
@@ -120,7 +138,8 @@
                 <button id="btnRegistrarBeneficiario"
                         type="submit"
                         class="btn btn-primario"
-                        th:disabled="${cupoCompleto != null && cupoCompleto}">
+                        th:disabled="${(modoEdicion == null || !modoEdicion) && cupoCompleto != null && cupoCompleto}"
+                        th:text="${modoEdicion != null && modoEdicion ? 'Guardar cambios' : 'Registrar beneficiario'}">
                     Registrar beneficiario
                 </button>
                 <a class="btn btn-secundario"
@@ -130,13 +149,13 @@
             </div>
             <p id="avisoCupoCompleto"
                class="ayuda ayuda-error"
-               th:if="${cupoCompleto != null && cupoCompleto}">
+               th:if="${(modoEdicion == null || !modoEdicion) && cupoCompleto != null && cupoCompleto}">
                 No se puede registrar otro beneficiario en esta póliza porque ya alcanzó el 100% de beneficios asignados (0% disponible). Cambia la clave de póliza si deseas registrar en otra póliza.
             </p>
         </form>
     </section>
 </main>
-<script th:if="${cupoCompleto != null && cupoCompleto}" th:inline="javascript">
+<script th:if="${(modoEdicion == null || !modoEdicion) && cupoCompleto != null && cupoCompleto}" th:inline="javascript">
     (function () {
         var claveOriginal = /*[[${clavePolizaBuscada}]]*/ '';
         var inputClave = document.getElementById('clavePoliza');

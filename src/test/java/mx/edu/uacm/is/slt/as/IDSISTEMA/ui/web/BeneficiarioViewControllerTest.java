@@ -9,7 +9,9 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.AltaBeneficiarioUseCase;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.BajaBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ConsultaBeneficiarioUseCase;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ModificacionBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.RecursoNoEncontradoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
@@ -19,6 +21,9 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDu
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -48,6 +53,12 @@ class BeneficiarioViewControllerTest {
 
     @MockitoBean
     private ConsultaBeneficiarioUseCase consultaBeneficiarioUseCase;
+
+    @MockitoBean
+    private ModificacionBeneficiarioUseCase modificacionBeneficiarioUseCase;
+
+    @MockitoBean
+    private BajaBeneficiarioUseCase bajaBeneficiarioUseCase;
 
     private Beneficiario crearBeneficiario(String nombres, int porcentaje) {
         return new Beneficiario(
@@ -291,5 +302,84 @@ class BeneficiarioViewControllerTest {
                 .andExpect(view().name("beneficiarios/lista"))
                 .andExpect(content().string(containsString("HTTP 503")))
                 .andExpect(content().string(not(containsString("nachintoch.mx"))));
+    }
+
+    @Test
+    void debeCargarYActualizarBeneficiarioEnFormularioDeEdicion() throws Exception {
+        Beneficiario ana = crearBeneficiario("Ana", 40);
+        Beneficiario carlos = crearBeneficiario("Carlos", 35);
+        when(consultaBeneficiarioUseCase.consultarPorDatos(
+                CLAVE_POLIZA, "Ana", "Lopez", "Perez", LocalDate.of(1992, 5, 10)))
+                .thenReturn(ana);
+        when(consultaBeneficiarioUseCase.listarPorPoliza(CLAVE_POLIZA))
+                .thenReturn(List.of(ana, carlos));
+
+        mockMvc.perform(get("/web/beneficiarios/editar")
+                .param("clavePoliza", CLAVE_POLIZA.toString())
+                .param("nombres", "Ana")
+                .param("primerApellido", "Lopez")
+                .param("segundoApellido", "Perez")
+                .param("fechaNacimiento", "1992-05-10"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("beneficiarios/formulario"))
+                .andExpect(model().attribute("modoEdicion", true))
+                .andExpect(model().attribute("porcentajeMaximoEdicion", 65))
+                .andExpect(content().string(containsString("Guardar cambios")));
+
+        Beneficiario actualizado = crearBeneficiario("Ana", 55);
+        when(modificacionBeneficiarioUseCase.actualizar(
+                eq(CLAVE_POLIZA),
+                eq("Ana"),
+                eq("Lopez"),
+                eq("Perez"),
+                eq(LocalDate.of(1992, 5, 10)),
+                any(Beneficiario.class)))
+                .thenReturn(actualizado);
+
+        mockMvc.perform(post("/web/beneficiarios/editar")
+                .param("clavePoliza", CLAVE_POLIZA.toString())
+                .param("nombresOriginales", "Ana")
+                .param("primerApellidoOriginal", "Lopez")
+                .param("segundoApellidoOriginal", "Perez")
+                .param("fechaNacimientoOriginal", "1992-05-10")
+                .param("porcentajeOriginal", "40")
+                .param("nombres", "Ana")
+                .param("primerApellido", "Lopez")
+                .param("segundoApellido", "Perez")
+                .param("fechaNacimiento", "1992-05-10")
+                .param("porcentaje", "55"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/web/beneficiarios?clavePoliza=" + CLAVE_POLIZA))
+                .andExpect(flash().attributeExists("alerta"));
+    }
+
+    @Test
+    void debeEliminarBeneficiarioYRedirigirSegunOrigen() throws Exception {
+        doNothing().when(bajaBeneficiarioUseCase).eliminar(
+                CLAVE_POLIZA, "Ana", "Lopez", "Perez", LocalDate.of(1992, 5, 10));
+
+        mockMvc.perform(post("/web/beneficiarios/eliminar")
+                .param("clavePoliza", CLAVE_POLIZA.toString())
+                .param("nombres", "Ana")
+                .param("primerApellido", "Lopez")
+                .param("segundoApellido", "Perez")
+                .param("fechaNacimiento", "1992-05-10"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/web/beneficiarios?clavePoliza=" + CLAVE_POLIZA))
+                .andExpect(flash().attributeExists("alerta"));
+
+        mockMvc.perform(post("/web/beneficiarios/eliminar")
+                .param("clavePoliza", CLAVE_POLIZA.toString())
+                .param("nombres", "Ana")
+                .param("primerApellido", "Lopez")
+                .param("segundoApellido", "Perez")
+                .param("fechaNacimiento", "1992-05-10")
+                .param("origen", "poliza"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/web/polizas/" + CLAVE_POLIZA))
+                .andExpect(flash().attributeExists("alerta"));
+
+        verify(bajaBeneficiarioUseCase, org.mockito.Mockito.times(2)).eliminar(
+                CLAVE_POLIZA, "Ana", "Lopez", "Perez", LocalDate.of(1992, 5, 10));
     }
 }

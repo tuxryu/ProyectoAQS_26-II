@@ -104,6 +104,27 @@
 
         <div class="acciones-formulario">
             <a class="btn btn-primario"
+               th:href="@{/web/beneficiarios/editar(
+                   clavePoliza=${beneficiario.clavePoliza},
+                   nombres=${beneficiario.nombres},
+                   primerApellido=${beneficiario.primerApellido},
+                   segundoApellido=${beneficiario.segundoApellido},
+                   fechaNacimiento=${beneficiario.fechaNacimiento}
+               )}">
+                Modificar beneficiario
+            </a>
+            <form method="post"
+                  th:action="@{/web/beneficiarios/eliminar}"
+                  onsubmit="return confirm('¿Estás seguro de eliminar este beneficiario? La póliza y los demás beneficiarios se conservarán.');"
+                  style="display: inline-block;">
+                <input type="hidden" name="clavePoliza" th:value="${beneficiario.clavePoliza}">
+                <input type="hidden" name="nombres" th:value="${beneficiario.nombres}">
+                <input type="hidden" name="primerApellido" th:value="${beneficiario.primerApellido}">
+                <input type="hidden" name="segundoApellido" th:value="${beneficiario.segundoApellido != null ? beneficiario.segundoApellido : ''}">
+                <input type="hidden" name="fechaNacimiento" th:value="${beneficiario.fechaNacimiento}">
+                <button type="submit" class="btn btn-peligro">Eliminar beneficiario</button>
+            </form>
+            <a class="btn btn-secundario"
                th:href="@{/web/beneficiarios(clavePoliza=${beneficiario.clavePoliza})}">
                 Ver todos los beneficiarios de esta póliza
             </a>
