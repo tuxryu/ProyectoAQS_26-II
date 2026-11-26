@@ -309,6 +309,11 @@ body {
     color: var(--color-texto-suave);
 }
 
+.ayuda-error {
+    color: var(--color-error-texto);
+    font-weight: 600;
+}
+
 .form-fila-inline {
     display: flex;
     gap: 10px;
@@ -364,6 +369,21 @@ body {
     font-size: 0.84rem;
 }
 
+.btn:disabled,
+.btn[disabled] {
+    background-color: #cbd5e1;
+    color: #475569;
+    border-color: #cbd5e1;
+    cursor: not-allowed;
+    opacity: 0.85;
+}
+
+.btn:disabled:hover,
+.btn[disabled]:hover {
+    background-color: #cbd5e1;
+    border-color: #cbd5e1;
+}
+
 .tabla-responsive {
     overflow-x: auto;
 }
@@ -398,6 +418,15 @@ tbody tr:hover {
     font-weight: 600;
     color: var(--color-primario);
     white-space: nowrap;
+}
+
+.codigo-uuid {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-weight: 600;
+    color: var(--color-primario);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .acciones-fila {
@@ -452,6 +481,14 @@ tbody tr:hover {
     margin: 0 0 18px;
 }
 
+.detalle-item {
+    min-width: 0;
+}
+
+.detalle-item.ancho-completo {
+    grid-column: 1 / -1;
+}
+
 .detalle-item dt {
     font-size: 0.82rem;
     text-transform: uppercase;
@@ -465,6 +502,13 @@ tbody tr:hover {
     font-size: 1rem;
     font-weight: 600;
     color: var(--color-texto);
+    overflow-wrap: anywhere;
+}
+
+.detalle-item .codigo-curp {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .acciones-formulario {

@@ -129,6 +129,7 @@ public class BeneficiarioController {
         String segundoApellido = normalizarSegundoApellido(solicitud.segundoApellido());
         Beneficiario nuevo;
         try {
+            Beneficiario.validarFechaNacimientoParaRegistro(solicitud.fechaNacimiento());
             nuevo = new Beneficiario(
                     solicitud.nombres(),
                     solicitud.primerApellido(),
@@ -233,6 +234,7 @@ public class BeneficiarioController {
         String nuevoSegundo = normalizarSegundoApellido(solicitud.segundoApellido());
         Beneficiario actualizado;
         try {
+            Beneficiario.validarFechaNacimientoParaRegistro(solicitud.fechaNacimiento());
             actualizado = new Beneficiario(
                     solicitud.nombres(),
                     solicitud.primerApellido(),

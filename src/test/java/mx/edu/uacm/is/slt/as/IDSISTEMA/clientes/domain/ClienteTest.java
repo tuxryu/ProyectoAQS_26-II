@@ -6,6 +6,8 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.exception.ClienteNoEncont
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.exception.CurpInvalidaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.clientes.domain.model.Cliente;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.RecursoNoEncontradoException;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -76,5 +78,24 @@ class ClienteTest {
                 = new CurpInvalidaException("CURP con formato invalido", causa);
         assertEquals("CURP con formato invalido", curpInvalida.getMessage());
         assertSame(causa, curpInvalida.getCause());
+    }
+
+    @Test
+    void debeValidarRangoDeEdadDeClienteEntre18Y100AnosSinFechasFuturas() {
+        LocalDate hoy = LocalDate.of(2026, 11, 25);
+
+        assertDoesNotThrow(() -> Cliente.validarFechaNacimientoParaRegistro(
+                hoy.minusYears(18), hoy));
+        assertDoesNotThrow(() -> Cliente.validarFechaNacimientoParaRegistro(
+                hoy.minusYears(100), hoy));
+
+        assertThrows(ReglaNegocioException.class, () -> Cliente.validarFechaNacimientoParaRegistro(
+                hoy.plusDays(1), hoy));
+        assertThrows(ReglaNegocioException.class, () -> Cliente.validarFechaNacimientoParaRegistro(
+                LocalDate.of(1825, 1, 1), hoy));
+        assertThrows(ReglaNegocioException.class, () -> Cliente.validarFechaNacimientoParaRegistro(
+                hoy.minusYears(100).minusDays(1), hoy));
+        assertThrows(ReglaNegocioException.class, () -> Cliente.validarFechaNacimientoParaRegistro(
+                hoy.minusYears(18).plusDays(1), hoy));
     }
 }

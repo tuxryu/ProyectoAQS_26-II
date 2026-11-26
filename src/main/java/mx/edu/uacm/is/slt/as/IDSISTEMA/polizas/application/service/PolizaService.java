@@ -10,7 +10,6 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.FiltroPoliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.out.PolizaRemotaPort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.exception.PolizaNoEncontradaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.FuncionalidadNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
 
@@ -80,10 +79,8 @@ public class PolizaService implements ConsultaPolizaUseCase {
         }
         FiltroPoliza.PorFechaNacimientoBeneficiario porFecha
                 = (FiltroPoliza.PorFechaNacimientoBeneficiario) filtro;
-        throw new FuncionalidadNoDisponibleException(
-                "La consulta por fecha de nacimiento del beneficiario ("
-                + porFecha.fechaNacimiento()
-                + ") aun no esta disponible.");
+        return polizaRemotaPort.buscarPorFechaNacimientoBeneficiario(
+                porFecha.fechaNacimiento());
     }
 
     private void validarPaginacion(int pagina, int tamano) {

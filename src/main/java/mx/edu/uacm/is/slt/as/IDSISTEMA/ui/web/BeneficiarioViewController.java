@@ -179,6 +179,7 @@ public class BeneficiarioViewController {
                 primerApellido,
                 segundoApellido,
                 fechaNacimiento);
+        cargarLimitesFechaFormulario(model);
         if (sinParametrosBusqueda(clavePoliza, nombres, primerApellido, fechaNacimiento)) {
             return VISTA_DETALLE;
         }
@@ -217,6 +218,7 @@ public class BeneficiarioViewController {
                 : new BeneficiarioFormulario();
         model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
         model.addAttribute(ATRIBUTO_MODO_EDICION, false);
+        cargarLimitesFechaFormulario(model);
         if (claveNorm != null) {
             cargarResumenOpcionalParaFormulario(claveNorm, model);
         }
@@ -250,6 +252,7 @@ public class BeneficiarioViewController {
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
             model.addAttribute(ATRIBUTO_MODO_EDICION, false);
+            cargarLimitesFechaFormulario(model);
             String claveNorm = normalizarOpcional(formulario.getClavePoliza());
             if (claveNorm != null) {
                 cargarResumenSilenciosoParaFormulario(claveNorm, model);
@@ -292,6 +295,7 @@ public class BeneficiarioViewController {
                     fecha);
             model.addAttribute(ATRIBUTO_FORMULARIO, BeneficiarioFormulario.desde(existente));
             model.addAttribute(ATRIBUTO_MODO_EDICION, true);
+            cargarLimitesFechaFormulario(model);
             cargarResumenParaEdicion(uuidPoliza.toString(), existente.getPorcentaje(), model);
             return VISTA_FORMULARIO;
         } catch (RuntimeException ex) {
@@ -339,6 +343,7 @@ public class BeneficiarioViewController {
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
             model.addAttribute(ATRIBUTO_MODO_EDICION, true);
+            cargarLimitesFechaFormulario(model);
             String claveNorm = normalizarOpcional(formulario.getClavePoliza());
             int porcentajeOriginal = parsearPorcentajeSeguro(formulario.getPorcentajeOriginal());
             if (claveNorm != null) {
@@ -450,6 +455,13 @@ public class BeneficiarioViewController {
             List<Beneficiario> actuales
                     = consultaBeneficiarioUseCase.listarPorPoliza(uuidPoliza);
             cargarResumenPoliza(model, uuidPoliza.toString(), actuales);
+            int suma = calcularSumaPorcentajes(actuales);
+            if (suma >= PORCENTAJE_MAXIMO) {
+                model.addAttribute(
+                        ATRIBUTO_ALERTA,
+                        AlertaWeb.avisoCupoCompletoBeneficiarios(
+                                uuidPoliza.toString(), suma));
+            }
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_POLIZA_CONSULTADA, false);
             model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
@@ -496,6 +508,13 @@ public class BeneficiarioViewController {
         }
     }
 
+    private void cargarLimitesFechaFormulario(Model model) {
+        model.addAttribute(
+                "fechaMinimaBeneficiario", Beneficiario.fechaMinimaRegistro().toString());
+        model.addAttribute(
+                "fechaMaximaBeneficiario", Beneficiario.fechaMaximaRegistro().toString());
+    }
+
     private int calcularSumaPorcentajes(List<Beneficiario> beneficiarios) {
         return beneficiarios.stream()
                 .mapToInt(Beneficiario::getPorcentaje)
@@ -505,6 +524,7 @@ public class BeneficiarioViewController {
     private Beneficiario construirBeneficiario(BeneficiarioFormulario formulario) {
         UUID clavePoliza = parsearUuid(formulario.getClavePoliza());
         LocalDate fechaNacimiento = parsearFecha(formulario.getFechaNacimiento());
+        Beneficiario.validarFechaNacimientoParaRegistro(fechaNacimiento);
         int porcentaje = parsearPorcentaje(formulario.getPorcentaje());
         String nombres = limpiarObligatorio(formulario.getNombres());
         String primerApellido = limpiarObligatorio(formulario.getPrimerApellido());

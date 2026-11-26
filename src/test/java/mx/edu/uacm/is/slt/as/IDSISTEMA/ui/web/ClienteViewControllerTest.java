@@ -183,6 +183,36 @@ class ClienteViewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("clientes/detalle"))
                 .andExpect(content().string(containsString("HTTP 422")));
+
+        mockMvc.perform(post("/web/clientes/nuevo")
+                .param("curp", CURP_VALIDA)
+                .param("nombres", "Emmett")
+                .param("primerApellido", "Brown")
+                .param("direccion", "Av. Universidad 123")
+                .param("fechaNacimiento", LocalDate.now().plusDays(10).toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clientes/formulario"))
+                .andExpect(content().string(containsString("HTTP 422")));
+
+        mockMvc.perform(post("/web/clientes/nuevo")
+                .param("curp", CURP_VALIDA)
+                .param("nombres", "Emmett")
+                .param("primerApellido", "Brown")
+                .param("direccion", "Av. Universidad 123")
+                .param("fechaNacimiento", "1825-05-01"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clientes/formulario"))
+                .andExpect(content().string(containsString("HTTP 422")));
+
+        mockMvc.perform(post("/web/clientes/nuevo")
+                .param("curp", CURP_VALIDA)
+                .param("nombres", "Emmett")
+                .param("primerApellido", "Brown")
+                .param("direccion", "Av. Universidad 123")
+                .param("fechaNacimiento", LocalDate.now().minusYears(15).toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("clientes/formulario"))
+                .andExpect(content().string(containsString("HTTP 422")));
     }
 
     @Test

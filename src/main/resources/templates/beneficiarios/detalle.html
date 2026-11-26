@@ -76,9 +76,9 @@
     <section class="card" th:if="${beneficiario != null}">
         <h2>Datos del Beneficiario</h2>
         <dl class="detalle-grid">
-            <div class="detalle-item">
+            <div class="detalle-item ancho-completo">
                 <dt>Clave de Póliza</dt>
-                <dd class="codigo-curp" th:text="${beneficiario.clavePoliza}">UUID</dd>
+                <dd class="codigo-uuid" th:text="${beneficiario.clavePoliza}">UUID</dd>
             </div>
             <div class="detalle-item">
                 <dt>Nombres</dt>

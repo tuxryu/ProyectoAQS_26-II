@@ -25,17 +25,21 @@ public sealed interface FiltroCliente {
      * @throws SolicitudInvalidaException si los datos enviados son incoherentes
      */
     static FiltroCliente desde(String nombres, String primerApellido, String segundoApellido) {
-        if (nombres == null && primerApellido == null && segundoApellido == null) {
+        String nombresNorm = normalizarOpcional(nombres);
+        String primerNorm = normalizarOpcional(primerApellido);
+        String segundoNorm = normalizarOpcional(segundoApellido);
+        if (nombresNorm == null && primerNorm == null && segundoNorm == null) {
             return new Todos();
         }
-        return new PorNombre(nombres, primerApellido, segundoApellido);
+        return new PorNombre(nombresNorm, primerNorm, segundoNorm);
     }
 
-    private static void exigirTexto(String valor, String campo) {
-        if (valor == null || valor.trim().isEmpty()) {
-            throw new SolicitudInvalidaException(campo + " es obligatorio.");
+    private static String normalizarOpcional(String valor) {
+        if (valor == null) {
+            return null;
         }
-        validarLongitudYCaracteres(valor, campo);
+        String limpio = valor.trim();
+        return limpio.isEmpty() ? null : limpio;
     }
 
     private static void validarLongitudYCaracteres(String valor, String campo) {
@@ -57,21 +61,29 @@ public sealed interface FiltroCliente {
     }
 
     /**
-     * Clientes filtrados por nombre completo.
+     * Clientes filtrados por nombre o apellidos (requiere al menos un criterio).
      *
-     * @param nombres nombres del cliente
-     * @param primerApellido primer apellido del cliente
+     * @param nombres nombres del cliente (opcional)
+     * @param primerApellido primer apellido del cliente (opcional)
      * @param segundoApellido segundo apellido del cliente (opcional)
      */
     record PorNombre(String nombres, String primerApellido, String segundoApellido)
             implements FiltroCliente {
 
         /**
-         * Valida nombres y apellidos.
+         * Valida que exista al menos un criterio y que ningun campo exceda la
+         * longitud maxima ni incluya diagonales.
          */
         public PorNombre {
-            exigirTexto(nombres, "El parametro nombres");
-            exigirTexto(primerApellido, "El parametro primerApellido");
+            boolean sinNombres = nombres == null || nombres.trim().isEmpty();
+            boolean sinPrimer = primerApellido == null || primerApellido.trim().isEmpty();
+            boolean sinSegundo = segundoApellido == null || segundoApellido.trim().isEmpty();
+            if (sinNombres && sinPrimer && sinSegundo) {
+                throw new SolicitudInvalidaException(
+                        "Debe indicar al menos un nombre o apellido para filtrar.");
+            }
+            validarLongitudYCaracteres(nombres, "El parametro nombres");
+            validarLongitudYCaracteres(primerApellido, "El parametro primerApellido");
             validarLongitudYCaracteres(segundoApellido, "El parametro segundoApellido");
         }
     }
