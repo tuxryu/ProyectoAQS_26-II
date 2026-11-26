@@ -1,6 +1,7 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.ui.web;
 
 import java.time.format.DateTimeParseException;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.FuncionalidadNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.RecursoNoEncontradoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
@@ -17,6 +18,8 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalida
 public record AlertaWeb(String tipo, Integer codigo, String titulo, String mensaje) {
 
     private static final char A_ACENTO = (char) 0xE1;
+
+    private static final char I_ACENTO = (char) 0xED;
 
     private static final char O_ACENTO = (char) 0xF3;
 
@@ -35,6 +38,8 @@ public record AlertaWeb(String tipo, Integer codigo, String titulo, String mensa
     private static final int HTTP_503 = 503;
 
     private static final int HTTP_500 = 500;
+
+    private static final int HTTP_501 = 501;
 
     private static final String TIPO_EXITO = "exito";
 
@@ -63,6 +68,9 @@ public record AlertaWeb(String tipo, Integer codigo, String titulo, String mensa
     private static final String MENSAJE_500
             = "Ocurri" + O_ACENTO + " un error inesperado al procesar la solicitud.";
 
+    private static final String MENSAJE_501
+            = "La funcionalidad solicitada no est" + A_ACENTO + " disponible por el momento.";
+
     /**
      * Crea una alerta de operacion exitosa.
      *
@@ -72,6 +80,36 @@ public record AlertaWeb(String tipo, Integer codigo, String titulo, String mensa
      */
     public static AlertaWeb exito(String titulo, String mensaje) {
         return new AlertaWeb(TIPO_EXITO, null, titulo, mensaje);
+    }
+
+    /**
+     * Crea una alerta de aviso informativo o preventivo para el usuario.
+     *
+     * @param titulo titulo breve
+     * @param mensaje detalle del aviso
+     * @return alerta de tipo aviso
+     */
+    public static AlertaWeb aviso(String titulo, String mensaje) {
+        return new AlertaWeb(TIPO_AVISO, null, titulo, mensaje);
+    }
+
+    /**
+     * Crea una alerta clara cuando la poliza seleccionada ya alcanzo el 100%
+     * de beneficiarios asignados y no permite agregar otro beneficiario.
+     *
+     * @param clavePoliza clave UUID de la poliza
+     * @param sumaActual suma actual de porcentajes asignados
+     * @return alerta de aviso explicando el motivo del bloqueo
+     */
+    public static AlertaWeb avisoCupoCompletoBeneficiarios(
+            String clavePoliza, int sumaActual) {
+        return aviso(
+                "P" + O_ACENTO + "liza al 100% de beneficiarios",
+                "La p" + O_ACENTO + "liza " + clavePoliza + " ya tiene asignado el "
+                        + sumaActual + "% de beneficios (disponible: 0%). "
+                        + "No es posible agregar otro beneficiario porque se superar"
+                        + I_ACENTO + "a el l" + I_ACENTO + "mite m" + A_ACENTO
+                        + "ximo del 100%.");
     }
 
     /**
@@ -111,6 +149,13 @@ public record AlertaWeb(String tipo, Integer codigo, String titulo, String mensa
                 || ex instanceof IllegalArgumentException
                 || ex instanceof DateTimeParseException) {
             return validacion(ex.getMessage());
+        }
+        if (ex instanceof FuncionalidadNoDisponibleException) {
+            return new AlertaWeb(
+                    TIPO_AVISO,
+                    HTTP_501,
+                    "Funcionalidad no disponible",
+                    sanitizar(ex.getMessage(), MENSAJE_501));
         }
         return desdeNombreExcepcion(ex);
     }

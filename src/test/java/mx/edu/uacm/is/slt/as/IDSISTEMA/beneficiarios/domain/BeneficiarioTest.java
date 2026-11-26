@@ -7,6 +7,8 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.exception.Beneficiar
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.exception.PorcentajeInvalidoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.BeneficiarioId;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -82,5 +84,24 @@ class BeneficiarioTest {
 
         assertThrows(IllegalArgumentException.class, () -> new Beneficiario(
                 "Ana", "Lopez", null, fecha, null, 50));
+    }
+
+    @Test
+    void debeValidarFechaDeBeneficiarioPermitiendoMenoresYRechazandoFuturasOMayoresA100Anos() {
+        LocalDate hoy = LocalDate.of(2026, 11, 25);
+
+        assertDoesNotThrow(() -> Beneficiario.validarFechaNacimientoParaRegistro(
+                hoy, hoy));
+        assertDoesNotThrow(() -> Beneficiario.validarFechaNacimientoParaRegistro(
+                hoy.minusYears(10), hoy));
+        assertDoesNotThrow(() -> Beneficiario.validarFechaNacimientoParaRegistro(
+                hoy.minusYears(100), hoy));
+
+        assertThrows(ReglaNegocioException.class, () -> Beneficiario
+                .validarFechaNacimientoParaRegistro(hoy.plusDays(1), hoy));
+        assertThrows(ReglaNegocioException.class, () -> Beneficiario
+                .validarFechaNacimientoParaRegistro(LocalDate.of(1825, 1, 1), hoy));
+        assertThrows(ReglaNegocioException.class, () -> Beneficiario
+                .validarFechaNacimientoParaRegistro(hoy.minusYears(100).minusDays(1), hoy));
     }
 }

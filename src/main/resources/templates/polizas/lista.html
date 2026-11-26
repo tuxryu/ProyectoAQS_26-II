@@ -77,8 +77,9 @@
                     <input id="filtroFechaBeneficiario"
                            name="fechaBeneficiario"
                            type="date"
-                           th:value="${filtroFechaBeneficiario}">
-                    <span class="ayuda">Formato AAAA-MM-DD.</span>
+                           th:value="${filtroFechaBeneficiario}"
+                           th:attr="max=${fechaMaximaBeneficiario}">
+                    <span class="ayuda">Formato AAAA-MM-DD (no se permiten fechas futuras).</span>
                 </div>
 
                 <div class="form-grid campo-filtro" data-filtro="cliente beneficiario">

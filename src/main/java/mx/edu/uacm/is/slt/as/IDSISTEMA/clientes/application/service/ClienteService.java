@@ -68,6 +68,7 @@ public class ClienteService
             throw new SolicitudInvalidaException(
                     "Los datos del cliente son obligatorios.");
         }
+        Cliente.validarFechaNacimientoParaRegistro(cliente.getFechaNacimiento());
         String curp = cliente.getCurp();
         if (clienteRemotoPort.buscarPorCurp(curp).isPresent()) {
             throw new ConflictoDatosException(
@@ -90,6 +91,7 @@ public class ClienteService
             throw new SolicitudInvalidaException(
                     "Los datos del cliente son obligatorios.");
         }
+        Cliente.validarFechaNacimientoParaRegistro(cliente.getFechaNacimiento());
         String curp = cliente.getCurp();
         if (clienteRemotoPort.buscarPorCurp(curp).isEmpty()) {
             throw new ClienteNoEncontradoException(curp);

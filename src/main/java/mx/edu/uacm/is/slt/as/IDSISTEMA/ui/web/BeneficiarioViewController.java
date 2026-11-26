@@ -138,6 +138,7 @@ public class BeneficiarioViewController {
                 primerApellido,
                 segundoApellido,
                 fechaNacimiento);
+        cargarLimitesFechaFormulario(model);
         if (sinParametrosBusqueda(clavePoliza, nombres, primerApellido, fechaNacimiento)) {
             return VISTA_DETALLE;
         }
@@ -175,6 +176,7 @@ public class BeneficiarioViewController {
                 ? BeneficiarioFormulario.paraPoliza(claveNorm)
                 : new BeneficiarioFormulario();
         model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
+        cargarLimitesFechaFormulario(model);
         if (claveNorm != null) {
             cargarResumenOpcionalParaFormulario(claveNorm, model);
         }
@@ -207,6 +209,7 @@ public class BeneficiarioViewController {
             return "redirect:/web/beneficiarios";
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
+            cargarLimitesFechaFormulario(model);
             String claveNorm = normalizarOpcional(formulario.getClavePoliza());
             if (claveNorm != null) {
                 cargarResumenSilenciosoParaFormulario(claveNorm, model);
@@ -261,6 +264,13 @@ public class BeneficiarioViewController {
             List<Beneficiario> actuales
                     = consultaBeneficiarioUseCase.listarPorPoliza(uuidPoliza);
             cargarResumenPoliza(model, uuidPoliza.toString(), actuales);
+            int suma = calcularSumaPorcentajes(actuales);
+            if (suma >= PORCENTAJE_MAXIMO) {
+                model.addAttribute(
+                        ATRIBUTO_ALERTA,
+                        AlertaWeb.avisoCupoCompletoBeneficiarios(
+                                uuidPoliza.toString(), suma));
+            }
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_POLIZA_CONSULTADA, false);
             model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
@@ -278,6 +288,13 @@ public class BeneficiarioViewController {
         }
     }
 
+    private void cargarLimitesFechaFormulario(Model model) {
+        model.addAttribute(
+                "fechaMinimaBeneficiario", Beneficiario.fechaMinimaRegistro().toString());
+        model.addAttribute(
+                "fechaMaximaBeneficiario", Beneficiario.fechaMaximaRegistro().toString());
+    }
+
     private int calcularSumaPorcentajes(List<Beneficiario> beneficiarios) {
         return beneficiarios.stream()
                 .mapToInt(Beneficiario::getPorcentaje)
@@ -287,6 +304,7 @@ public class BeneficiarioViewController {
     private Beneficiario construirBeneficiario(BeneficiarioFormulario formulario) {
         UUID clavePoliza = parsearUuid(formulario.getClavePoliza());
         LocalDate fechaNacimiento = parsearFecha(formulario.getFechaNacimiento());
+        Beneficiario.validarFechaNacimientoParaRegistro(fechaNacimiento);
         int porcentaje = parsearPorcentaje(formulario.getPorcentaje());
         String nombres = limpiarObligatorio(formulario.getNombres());
         String primerApellido = limpiarObligatorio(formulario.getPrimerApellido());

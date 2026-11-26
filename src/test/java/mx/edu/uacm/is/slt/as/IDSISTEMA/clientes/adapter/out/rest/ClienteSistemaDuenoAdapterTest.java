@@ -391,24 +391,40 @@ class ClienteSistemaDuenoAdapterTest {
                     "segundoApellido": "Lopez",
                     "direccion": "Calle 10",
                     "fechaNacimiento": "1990-01-01T06:00:00.000+00:00"
+                  },
+                  {
+                    "curp": "MVFNVM56465DFBGJKF",
+                    "nombres": "Rafael",
+                    "primerApellido": "Garcia",
+                    "segundoApellido": null,
+                    "direccion": "Av. del Arbol 45",
+                    "fechaNacimiento": "2010-02-10T06:00:00.000+00:00"
                   }
                 ]
                 """;
 
-        mockServer.expect(requestTo(URL_BASE + "/clientes/Juan/Perez"))
+        mockServer.expect(requestTo(URL_BASE + "/clientes"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
 
-        mockServer.expect(requestTo(URL_BASE + "/clientes/Juan/Perez/Lopez"))
+        mockServer.expect(requestTo(URL_BASE + "/clientes"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
+
+        mockServer.expect(requestTo(URL_BASE + "/clientes"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(json, MediaType.APPLICATION_JSON));
 
         List<Cliente> sinSegundo = adapter.buscarPorNombre("Juan", "Perez", null);
-        List<Cliente> conSegundo = adapter.buscarPorNombre("Juan", "Perez", "Lopez");
-
         assertEquals(1, sinSegundo.size());
+
+        List<Cliente> conSegundo = adapter.buscarPorNombre("Juan", "Perez", "Lopez");
         assertEquals(1, conSegundo.size());
         assertEquals("T404900101HDFAAA01", conSegundo.get(0).getCurp());
+
+        List<Cliente> mayusculas = adapter.buscarPorNombre("RAFAEL", "Garcia", null);
+        assertEquals(1, mayusculas.size());
+        assertEquals("MVFNVM56465DFBGJKF", mayusculas.get(0).getCurp());
         mockServer.verify();
     }
 }

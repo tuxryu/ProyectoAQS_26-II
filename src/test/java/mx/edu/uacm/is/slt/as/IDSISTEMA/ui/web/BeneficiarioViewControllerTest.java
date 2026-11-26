@@ -130,6 +130,65 @@ class BeneficiarioViewControllerTest {
     }
 
     @Test
+    void debeMostrarAlertaExplicitaCuandoLaPolizaYaAlcanzoEl100PorCientoEnFormulario()
+            throws Exception {
+        when(consultaBeneficiarioUseCase.listarPorPoliza(CLAVE_POLIZA))
+                .thenReturn(List.of(crearBeneficiario("Ana", 100)));
+
+        mockMvc.perform(get("/web/beneficiarios/nuevo")
+                .param("clavePoliza", CLAVE_POLIZA.toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("beneficiarios/formulario"))
+                .andExpect(model().attribute("cupoCompleto", true))
+                .andExpect(model().attributeExists("alerta"))
+                .andExpect(content().string(containsString("100%")))
+                .andExpect(content().string(containsString("disponible: 0%")));
+    }
+
+    @Test
+    void debeRechazarFechasFuturasYMayoresA100AnosPeroPermitirMenoresEnBeneficiarios()
+            throws Exception {
+        mockMvc.perform(post("/web/beneficiarios/nuevo")
+                .param("clavePoliza", CLAVE_POLIZA.toString())
+                .param("nombres", "Ana")
+                .param("primerApellido", "Lopez")
+                .param("fechaNacimiento", LocalDate.now().plusDays(5).toString())
+                .param("porcentaje", "20"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("beneficiarios/formulario"))
+                .andExpect(content().string(containsString("HTTP 422")));
+
+        mockMvc.perform(post("/web/beneficiarios/nuevo")
+                .param("clavePoliza", CLAVE_POLIZA.toString())
+                .param("nombres", "Ana")
+                .param("primerApellido", "Lopez")
+                .param("fechaNacimiento", "1825-05-01")
+                .param("porcentaje", "20"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("beneficiarios/formulario"))
+                .andExpect(content().string(containsString("HTTP 422")));
+
+        Beneficiario menor = new Beneficiario(
+                "Mateo",
+                "Lopez",
+                null,
+                LocalDate.now().minusYears(10),
+                CLAVE_POLIZA,
+                25);
+        when(altaBeneficiarioUseCase.registrar(any(Beneficiario.class)))
+                .thenReturn(menor);
+
+        mockMvc.perform(post("/web/beneficiarios/nuevo")
+                .param("clavePoliza", CLAVE_POLIZA.toString())
+                .param("nombres", "Mateo")
+                .param("primerApellido", "Lopez")
+                .param("fechaNacimiento", LocalDate.now().minusYears(10).toString())
+                .param("porcentaje", "25"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/web/beneficiarios?clavePoliza=" + CLAVE_POLIZA));
+    }
+
+    @Test
     void debeRegistrarBeneficiarioYRedirigirAlListadoDeLaPoliza() throws Exception {
         Beneficiario creado = crearBeneficiario("Ana", 30);
         when(altaBeneficiarioUseCase.registrar(any(Beneficiario.class)))

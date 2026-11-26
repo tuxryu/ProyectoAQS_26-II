@@ -192,6 +192,13 @@ class PolizaViewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("polizas/lista"))
                 .andExpect(content().string(containsString("HTTP 422")));
+
+        mockMvc.perform(get("/web/polizas")
+                .param("tipoFiltro", "fechaBeneficiario")
+                .param("fechaBeneficiario", LocalDate.now().plusYears(10).toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("polizas/lista"))
+                .andExpect(content().string(containsString("HTTP 422")));
     }
 
     @Test

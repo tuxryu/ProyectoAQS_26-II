@@ -1,6 +1,7 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.ui.web;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
@@ -36,6 +37,8 @@ public class PolizaViewController {
     private static final int TAMANO_POR_DEFECTO = 10;
 
     private static final int PORCENTAJE_MAXIMO = 100;
+
+    private static final ZoneId ZONA_CDMX = ZoneId.of("America/Mexico_City");
 
     private static final String FILTRO_TODAS = "todas";
 
@@ -305,7 +308,12 @@ public class PolizaViewController {
             throw new ReglaNegocioException(AlertaWeb.mensajeFechaInvalida());
         }
         try {
-            return LocalDate.parse(fechaTexto.trim());
+            LocalDate fecha = LocalDate.parse(fechaTexto.trim());
+            if (fecha.isAfter(LocalDate.now(ZONA_CDMX))) {
+                throw new ReglaNegocioException(
+                        "La fecha de nacimiento del beneficiario no puede ser una fecha futura.");
+            }
+            return fecha;
         } catch (DateTimeParseException ex) {
             throw new ReglaNegocioException(AlertaWeb.mensajeFechaInvalida());
         }
@@ -326,6 +334,7 @@ public class PolizaViewController {
         model.addAttribute("filtroCurp", valorSeguro(curp));
         model.addAttribute("filtroTipo", valorSeguro(tipo));
         model.addAttribute("filtroFechaBeneficiario", valorSeguro(fechaBeneficiario));
+        model.addAttribute("fechaMaximaBeneficiario", LocalDate.now(ZONA_CDMX).toString());
         model.addAttribute("filtroNombres", valorSeguro(nombres));
         model.addAttribute("filtroPrimerApellido", valorSeguro(primerApellido));
         model.addAttribute("filtroSegundoApellido", valorSeguro(segundoApellido));

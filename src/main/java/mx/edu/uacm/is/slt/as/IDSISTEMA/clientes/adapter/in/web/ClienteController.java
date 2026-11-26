@@ -172,6 +172,7 @@ public class ClienteController {
                 ? null
                 : solicitud.segundoApellido();
         try {
+            Cliente.validarFechaNacimientoParaRegistro(solicitud.fechaNacimiento());
             return new Cliente(
                     curp,
                     solicitud.nombres(),

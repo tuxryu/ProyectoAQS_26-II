@@ -51,8 +51,9 @@
                     <input id="fechaNacimiento"
                            type="date"
                            th:field="*{fechaNacimiento}"
+                           th:attr="min=${fechaMinimaCliente},max=${fechaMaximaCliente}"
                            required>
-                    <span class="ayuda">Formato AAAA-MM-DD.</span>
+                    <span class="ayuda">Formato AAAA-MM-DD. Edad permitida: entre 18 y 100 años (sin fechas futuras).</span>
                 </div>
 
                 <div class="form-grupo">
