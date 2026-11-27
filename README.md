@@ -17,7 +17,6 @@ Proyecto del curso de **Arquitectura de Software (2026-II)** — Licenciatura en
 | Angel De Jesus Vicencio | 17-003-0844 |
 | Oscar Alan Cruz Lopez | 16-003-0645 |
 | Rafael Garcia Mauricio | 16-002-0234 |
-| Angel Granados Perez | 16-003-1630 |
 | Hernandez Parada Mauricio | 14-003-1623 |
 | Luis Enrique Vargas Loza | 14-003-1419 |
 
@@ -73,7 +72,7 @@ En Windows (PowerShell / CMD):
    ```
 3. Abrir en el navegador:
    - **Interfaz Web (Thymeleaf):** `http://localhost:8080/`
-   - **API REST Propia:** `/clientes`, `/polizas`, `/polizas/{clave}/beneficiarios`
+   - **API REST Propia:** `/clientes`, `/polizas`, `/beneficiarios`, `/polizas/{clave}/beneficiarios` (`GET`, `POST`, `PUT`, `DELETE` compuesto)
 
 ---
 
@@ -82,7 +81,7 @@ En Windows (PowerShell / CMD):
 Toda la documentación del proyecto se encuentra en el directorio [`docs/`](docs/README.md):
 
 - [`docs/ERS_Sistema_Intermediario_Polizas.pdf`](docs/ERS_Sistema_Intermediario_Polizas.pdf) — Especificación de Requerimientos de Software (ERS).
-- [`docs/catalogo-endpoints-y-hallazgos.md`](docs/catalogo-endpoints-y-hallazgos.md) — Catálogo de los **17 endpoints** (`11 GET, 3 POST, 2 PUT, 1 DELETE`) y **24 hallazgos** del Sistema Dueño.
+- [`docs/catalogo-endpoints-y-hallazgos.md`](docs/catalogo-endpoints-y-hallazgos.md) — Catálogo de los **17 endpoints** (`11 GET, 3 POST, 2 PUT, 1 DELETE`) y los hallazgos experimentales del Sistema Dueño (24 base + hallazgos 25–27 en integración).
 - [`docs/hallazgos-sistema-dueno.pdf`](docs/hallazgos-sistema-dueno.pdf) — Evidencia en PDF de las pruebas al servidor remoto.
 - [`docs/casos-de-uso/`](docs/casos-de-uso/) — Los 11 documentos `.docx` de especificación de casos de uso (`NRM`, `PRN` y `EX`).
 - [`docs/arquitectura5.puml`](docs/arquitectura5.puml) / [`docs/arquitectura5.png`](docs/arquitectura5.png) — Diagrama de Arquitectura Limpia (v5, actualizado con los 17 endpoints e IU Web en `ui/web`).
