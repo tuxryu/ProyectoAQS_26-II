@@ -39,7 +39,7 @@
         <dl class="detalle-grid">
             <div class="detalle-item ancho-completo">
                 <dt>Clave UUID</dt>
-                <dd class="codigo-curp" th:text="${poliza.clave}">UUID</dd>
+                <dd class="codigo-uuid" th:text="${poliza.clave}">UUID</dd>
             </div>
             <div class="detalle-item">
                 <dt>Tipo</dt>
@@ -129,14 +129,36 @@
                     <td th:text="${ben.fechaNacimiento}">1990-01-01</td>
                     <td><strong th:text="${ben.porcentaje} + '%'">50%</strong></td>
                     <td>
-                        <a class="btn btn-secundario btn-chico"
-                           th:href="@{/web/beneficiarios/consultar(
-                               clavePoliza=${ben.clavePoliza},
-                               nombres=${ben.nombres},
-                               primerApellido=${ben.primerApellido},
-                               segundoApellido=${ben.segundoApellido},
-                               fechaNacimiento=${ben.fechaNacimiento}
-                           )}">Ver</a>
+                        <div class="acciones-fila">
+                            <a class="btn btn-secundario btn-chico"
+                               th:href="@{/web/beneficiarios/consultar(
+                                   clavePoliza=${ben.clavePoliza},
+                                   nombres=${ben.nombres},
+                                   primerApellido=${ben.primerApellido},
+                                   segundoApellido=${ben.segundoApellido},
+                                   fechaNacimiento=${ben.fechaNacimiento}
+                               )}">Ver</a>
+                            <a class="btn btn-primario btn-chico"
+                               th:href="@{/web/beneficiarios/editar(
+                                   clavePoliza=${ben.clavePoliza},
+                                   nombres=${ben.nombres},
+                                   primerApellido=${ben.primerApellido},
+                                   segundoApellido=${ben.segundoApellido},
+                                   fechaNacimiento=${ben.fechaNacimiento}
+                               )}">Editar</a>
+                            <form method="post"
+                                  th:action="@{/web/beneficiarios/eliminar}"
+                                  onsubmit="return confirm('¿Estás seguro de eliminar este beneficiario? La póliza y los demás beneficiarios se conservarán.');"
+                                  style="display: inline-block;">
+                                <input type="hidden" name="clavePoliza" th:value="${ben.clavePoliza}">
+                                <input type="hidden" name="nombres" th:value="${ben.nombres}">
+                                <input type="hidden" name="primerApellido" th:value="${ben.primerApellido}">
+                                <input type="hidden" name="segundoApellido" th:value="${ben.segundoApellido != null ? ben.segundoApellido : ''}">
+                                <input type="hidden" name="fechaNacimiento" th:value="${ben.fechaNacimiento}">
+                                <input type="hidden" name="origen" value="poliza">
+                                <button type="submit" class="btn btn-peligro btn-chico">Eliminar</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 </tbody>

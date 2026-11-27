@@ -16,7 +16,6 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.service.ModificacionP
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.service.PolizaService;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.exception.PolizaNoEncontradaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
-import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.FuncionalidadNoDisponibleException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.SolicitudInvalidaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
@@ -164,11 +163,14 @@ class PolizaServiceTest {
     }
 
     @Test
-    void debeLanzarFuncionalidadNoDisponibleParaFiltroPorFechaNacimientoBeneficiario() {
+    void debeFiltrarPorFechaNacimientoDeBeneficiario() {
         FiltroPoliza filtro = FiltroPoliza.desde(null, null, LocalDate.of(1990, 1, 1));
-        assertThrows(
-                FuncionalidadNoDisponibleException.class,
-                () -> service.consultar(filtro, 0, 10));
+        Pagina<Poliza> resultado = service.consultar(filtro, 0, 10);
+
+        assertEquals(3, resultado.contenido().size());
+        assertEquals(
+                "buscarPorFechaNacimientoBeneficiario:1990-01-01",
+                puertoFalso.ultimaOperacion);
     }
 
     @Test
@@ -277,6 +279,12 @@ class PolizaServiceTest {
             return datos.stream()
                     .filter(poliza -> poliza.getTipo() == (byte) tipo)
                     .toList();
+        }
+
+        @Override
+        public List<Poliza> buscarPorFechaNacimientoBeneficiario(LocalDate fechaNacimiento) {
+            ultimaOperacion = "buscarPorFechaNacimientoBeneficiario:" + fechaNacimiento;
+            return List.copyOf(datos);
         }
 
         @Override

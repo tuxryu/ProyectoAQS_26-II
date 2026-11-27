@@ -1,12 +1,18 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.adapter.out.rest;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.CancelarPolizaUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.ConsultaPolizaUseCase;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.CrearPolizaUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.application.port.in.FiltroPoliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.exception.PolizaNoEncontradaException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.polizas.domain.model.Poliza;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.model.Pagina;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,6 +48,40 @@ class PolizaRestAdapterTest {
         assertThrows(
                 NullPointerException.class,
                 () -> new PolizaRestAdapter(null));
+    }
+
+    @Test
+    void debeReiniciarPolizaConservandoClaveYAtributos() {
+        List<String> operaciones = new ArrayList<>();
+        List<Poliza> creadas = new ArrayList<>();
+        CancelarPolizaUseCasePort cancelarPort = clave -> operaciones.add("cancelar:" + clave);
+        CrearPolizaUseCasePort crearPort = poliza -> {
+            operaciones.add("crear:" + poliza.getClave());
+            creadas.add(poliza);
+            return poliza;
+        };
+        PolizaRestAdapter adapter = new PolizaRestAdapter(
+                new ConsultaPolizaFalsa(),
+                Optional.of(cancelarPort),
+                Optional.of(crearPort));
+
+        adapter.reiniciarPolizaConservandoClave(CLAVE_EXISTENTE);
+
+        assertEquals(
+                List.of("cancelar:" + CLAVE_EXISTENTE, "crear:" + CLAVE_EXISTENTE),
+                operaciones);
+        assertEquals(1, creadas.size());
+        assertEquals("Poliza de vida", creadas.get(0).getDescripcion());
+        assertEquals("BROE550101HDFABC00", creadas.get(0).getCurpCliente());
+    }
+
+    @Test
+    void debeRechazarReinicioCuandoFaltanPuertosDeEscrituraDePolizas() {
+        PolizaRestAdapter adapter = new PolizaRestAdapter(new ConsultaPolizaFalsa());
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> adapter.reiniciarPolizaConservandoClave(CLAVE_EXISTENTE));
     }
 
     private static final class ConsultaPolizaFalsa implements ConsultaPolizaUseCase {

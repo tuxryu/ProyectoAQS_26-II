@@ -162,6 +162,7 @@ public class ClienteViewController {
     public String mostrarFormularioAlta(Model model) {
         model.addAttribute(ATRIBUTO_FORMULARIO, new ClienteFormulario());
         model.addAttribute(ATRIBUTO_MODO_EDICION, false);
+        cargarLimitesFechaFormulario(model);
         return VISTA_FORMULARIO;
     }
 
@@ -191,6 +192,7 @@ public class ClienteViewController {
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
             model.addAttribute(ATRIBUTO_MODO_EDICION, false);
+            cargarLimitesFechaFormulario(model);
             model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
             return VISTA_FORMULARIO;
         }
@@ -267,6 +269,7 @@ public class ClienteViewController {
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_FORMULARIO, formulario);
             model.addAttribute(ATRIBUTO_MODO_EDICION, true);
+            cargarLimitesFechaFormulario(model);
             model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
             return VISTA_FORMULARIO;
         }
@@ -298,11 +301,17 @@ public class ClienteViewController {
             Cliente cliente = consultaClienteUseCase.consultarPorCurp(curp);
             model.addAttribute(ATRIBUTO_FORMULARIO, ClienteFormulario.desde(cliente));
             model.addAttribute(ATRIBUTO_MODO_EDICION, true);
+            cargarLimitesFechaFormulario(model);
             return VISTA_FORMULARIO;
         } catch (RuntimeException ex) {
             model.addAttribute(ATRIBUTO_ALERTA, AlertaWeb.desdeExcepcion(ex));
             return VISTA_BUSCAR_EDITAR;
         }
+    }
+
+    private void cargarLimitesFechaFormulario(Model model) {
+        model.addAttribute("fechaMinimaCliente", Cliente.fechaMinimaRegistro().toString());
+        model.addAttribute("fechaMaximaCliente", Cliente.fechaMaximaRegistro().toString());
     }
 
     private Cliente construirClienteParaAlta(ClienteFormulario formulario) {
@@ -315,6 +324,7 @@ public class ClienteViewController {
 
     private Cliente construirCliente(String curp, ClienteFormulario formulario) {
         LocalDate fecha = parsearFecha(formulario.getFechaNacimiento());
+        Cliente.validarFechaNacimientoParaRegistro(fecha);
         String nombres = limpiarObligatorio(formulario.getNombres());
         String primerApellido = limpiarObligatorio(formulario.getPrimerApellido());
         String segundoApellido = normalizarOpcional(formulario.getSegundoApellido());

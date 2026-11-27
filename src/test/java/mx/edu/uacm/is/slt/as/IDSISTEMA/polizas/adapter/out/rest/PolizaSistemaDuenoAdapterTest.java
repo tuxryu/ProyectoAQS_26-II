@@ -230,6 +230,20 @@ class PolizaSistemaDuenoAdapterTest {
     }
 
     @Test
+    void debeBuscarPolizasPorFechaNacimientoDeBeneficiario() {
+        mockServer.expect(requestTo(URL_BASE + "/polizas/b/1990-01-10"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[" + POLIZA_AUTO + "]", MediaType.APPLICATION_JSON));
+
+        List<Poliza> polizas = adapter.buscarPorFechaNacimientoBeneficiario(
+                LocalDate.of(1990, 1, 10));
+
+        assertEquals(1, polizas.size());
+        assertEquals(UUID.fromString(CLAVE_AUTO), polizas.get(0).getClave());
+        mockServer.verify();
+    }
+
+    @Test
     void debeBuscarPorClienteConSegundoApellido() {
         mockServer.expect(requestTo(URL_BASE + "/polizas/c/Emmett%20Lathrop/Brown/Lopez"))
                 .andExpect(method(HttpMethod.GET))

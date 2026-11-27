@@ -1,6 +1,7 @@
 package mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -8,11 +9,14 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.AltaBeneficiarioUseCase;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.BajaBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ConsultaBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ConsultarBeneficiarioUseCasePort;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.ModificacionBeneficiarioUseCase;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.in.RegistrarBeneficiarioUseCasePort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.out.BeneficiarioSistemaDuenoPort;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.application.port.out.PolizaServicioPort;
+import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.exception.BeneficiarioNoEncontradoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.beneficiarios.domain.model.Beneficiario;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.RecursoNoEncontradoException;
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.domain.exception.ReglaNegocioException;
@@ -21,15 +25,18 @@ import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.Conflicto
 import mx.edu.uacm.is.slt.as.IDSISTEMA.shared.infrastructure.exception.SistemaDuenoRechazoException;
 
 /**
- * Servicio de aplicacion para el modulo de beneficiarios: implementa la
- * consulta GET (general, individual y listado por poliza) y el alta vinculada
- * validando existencia de poliza (404), duplicidad (409), suma de porcentajes
- * menor o igual a 100% (422) y relectura posterior a la escritura.
+ * Servicio de aplicacion para el modulo de beneficiarios: implementa consulta
+ * GET (general, individual y por poliza), alta vinculada y las operaciones
+ * compuestas de baja y modificacion individual (respaldo en memoria, baja en
+ * cascada de la poliza, recreacion con la misma clave UUID y restauracion
+ * verificada).
  */
 @Service
 public class BeneficiarioService
         implements AltaBeneficiarioUseCase,
+        BajaBeneficiarioUseCase,
         ConsultaBeneficiarioUseCase,
+        ModificacionBeneficiarioUseCase,
         RegistrarBeneficiarioUseCasePort,
         ConsultarBeneficiarioUseCasePort {
 
@@ -86,6 +93,7 @@ public class BeneficiarioService
             throw new SolicitudInvalidaException(
                     "Los datos del beneficiario son obligatorios.");
         }
+        Beneficiario.validarFechaNacimientoParaRegistro(beneficiario.getFechaNacimiento());
         UUID clavePoliza = beneficiario.getClavePoliza();
         exigirPolizaExistente(clavePoliza);
 
@@ -106,11 +114,12 @@ public class BeneficiarioService
                 .mapToInt(Beneficiario::getPorcentaje)
                 .sum();
         if (sumaActual + beneficiario.getPorcentaje() > PORCENTAJE_MAXIMO_POLIZA) {
+            int disponible = Math.max(0, PORCENTAJE_MAXIMO_POLIZA - sumaActual);
             throw new ReglaNegocioException(
-                    "La suma de porcentajes de los beneficiarios para la poliza "
-                    + clavePoliza + " excede el 100% (actual: "
-                    + sumaActual + "%, solicitado: "
-                    + beneficiario.getPorcentaje() + "%).");
+                    "No es posible agregar el beneficiario porque la suma de porcentajes "
+                    + "de la poliza " + clavePoliza + " excede el 100% (asignado actual: "
+                    + sumaActual + "%, solicitado: " + beneficiario.getPorcentaje()
+                    + "%, disponible: " + disponible + "%).");
         }
 
         beneficiarioSistemaDuenoPort.guardar(beneficiario);
@@ -192,6 +201,206 @@ public class BeneficiarioService
         }
         exigirPolizaExistente(clavePoliza);
         return beneficiarioSistemaDuenoPort.listarPorPoliza(clavePoliza);
+    }
+
+    @Override
+    public void eliminar(
+            UUID clavePoliza,
+            String nombres,
+            String primerApellido,
+            String segundoApellido,
+            LocalDate fechaNacimiento) {
+        validarLlaveCompuesta(
+                clavePoliza, nombres, primerApellido, segundoApellido, fechaNacimiento);
+        String segundoNorm = normalizarSegundoApellido(segundoApellido);
+        exigirPolizaExistente(clavePoliza);
+
+        List<Beneficiario> actuales = beneficiarioSistemaDuenoPort.listarPorPoliza(clavePoliza);
+        List<Beneficiario> restantes = new ArrayList<>();
+        boolean encontrado = false;
+        for (Beneficiario actual : actuales) {
+            if (!encontrado && coincideLlave(
+                    actual, clavePoliza, nombres, primerApellido, segundoNorm, fechaNacimiento)) {
+                encontrado = true;
+            } else {
+                restantes.add(actual);
+            }
+        }
+        if (!encontrado) {
+            throw new BeneficiarioNoEncontradoException(
+                    "No se encontro el beneficiario solicitado en la poliza "
+                    + clavePoliza + ".");
+        }
+
+        polizaServicioPort.reiniciarPolizaConservandoClave(clavePoliza);
+        for (Beneficiario restante : restantes) {
+            beneficiarioSistemaDuenoPort.guardar(restante);
+        }
+
+        Optional<Beneficiario> verificado = beneficiarioSistemaDuenoPort.buscarPorDatos(
+                fechaNacimiento, clavePoliza, nombres, primerApellido, segundoNorm);
+        if (verificado.isPresent()) {
+            throw new SistemaDuenoRechazoException(
+                    "El Sistema Dueno no elimino el beneficiario solicitado.");
+        }
+        int totalActual = beneficiarioSistemaDuenoPort.listarPorPoliza(clavePoliza).size();
+        if (totalActual != restantes.size()) {
+            throw new SistemaDuenoRechazoException(
+                    "No se pudieron restaurar todos los beneficiarios restantes de la poliza.");
+        }
+    }
+
+    @Override
+    public Beneficiario actualizar(
+            UUID clavePoliza,
+            String nombresActuales,
+            String primerApellidoActual,
+            String segundoApellidoActual,
+            LocalDate fechaNacimientoActual,
+            Beneficiario beneficiarioActualizado) {
+        validarLlaveCompuesta(
+                clavePoliza,
+                nombresActuales,
+                primerApellidoActual,
+                segundoApellidoActual,
+                fechaNacimientoActual);
+        if (beneficiarioActualizado == null || beneficiarioActualizado.getId() == null) {
+            throw new SolicitudInvalidaException(
+                    "Los datos actualizados del beneficiario son obligatorios.");
+        }
+        Beneficiario.validarFechaNacimientoParaRegistro(
+                beneficiarioActualizado.getFechaNacimiento());
+        if (!clavePoliza.equals(beneficiarioActualizado.getClavePoliza())) {
+            throw new ReglaNegocioException(
+                    "No se puede cambiar la clave de poliza al modificar un beneficiario.");
+        }
+        exigirPolizaExistente(clavePoliza);
+        final String segundoActualNorm = normalizarSegundoApellido(segundoApellidoActual);
+
+        List<Beneficiario> actuales = beneficiarioSistemaDuenoPort.listarPorPoliza(clavePoliza);
+        Beneficiario original = null;
+        List<Beneficiario> otros = new ArrayList<>();
+        for (Beneficiario actual : actuales) {
+            if (original == null && coincideLlave(
+                    actual,
+                    clavePoliza,
+                    nombresActuales,
+                    primerApellidoActual,
+                    segundoActualNorm,
+                    fechaNacimientoActual)) {
+                original = actual;
+            } else {
+                otros.add(actual);
+            }
+        }
+        if (original == null) {
+            throw new BeneficiarioNoEncontradoException(
+                    "No se encontro el beneficiario solicitado en la poliza "
+                    + clavePoliza + ".");
+        }
+
+        String nuevoSegundoNorm = normalizarSegundoApellido(
+                beneficiarioActualizado.getSegundoApellido());
+        boolean existeDuplicado = otros.stream()
+                .anyMatch(otro -> coincideLlave(
+                        otro,
+                        clavePoliza,
+                        beneficiarioActualizado.getNombres(),
+                        beneficiarioActualizado.getPrimerApellido(),
+                        nuevoSegundoNorm,
+                        beneficiarioActualizado.getFechaNacimiento()));
+        if (existeDuplicado) {
+            throw new ConflictoDatosException(
+                    "Ya existe otro beneficiario con esos mismos datos en la poliza "
+                    + clavePoliza + ".");
+        }
+
+        int sumaOtros = otros.stream()
+                .mapToInt(Beneficiario::getPorcentaje)
+                .sum();
+        if (sumaOtros + beneficiarioActualizado.getPorcentaje() > PORCENTAJE_MAXIMO_POLIZA) {
+            int maximoDisponible = Math.max(0, PORCENTAJE_MAXIMO_POLIZA - sumaOtros);
+            throw new ReglaNegocioException(
+                    "La suma de porcentajes de los beneficiarios para la poliza "
+                    + clavePoliza + " excede el 100% (otros beneficiarios: "
+                    + sumaOtros + "%, solicitado: " + beneficiarioActualizado.getPorcentaje()
+                    + "%, maximo disponible: " + maximoDisponible + "%).");
+        }
+
+        boolean mismaLlave = coincideLlave(
+                original,
+                clavePoliza,
+                beneficiarioActualizado.getNombres(),
+                beneficiarioActualizado.getPrimerApellido(),
+                nuevoSegundoNorm,
+                beneficiarioActualizado.getFechaNacimiento());
+
+        if (mismaLlave) {
+            beneficiarioSistemaDuenoPort.guardar(beneficiarioActualizado);
+        } else {
+            polizaServicioPort.reiniciarPolizaConservandoClave(clavePoliza);
+            for (Beneficiario otro : otros) {
+                beneficiarioSistemaDuenoPort.guardar(otro);
+            }
+            beneficiarioSistemaDuenoPort.guardar(beneficiarioActualizado);
+        }
+
+        Beneficiario releido = beneficiarioSistemaDuenoPort.buscarPorDatos(
+                beneficiarioActualizado.getFechaNacimiento(),
+                clavePoliza,
+                beneficiarioActualizado.getNombres(),
+                beneficiarioActualizado.getPrimerApellido(),
+                nuevoSegundoNorm)
+                .orElseThrow(() -> new SistemaDuenoRechazoException(
+                        "El Sistema Dueno no persistio los cambios del beneficiario."));
+
+        if (!releido.equals(beneficiarioActualizado)) {
+            throw new SistemaDuenoRechazoException(
+                    "Los datos releidos del beneficiario no coinciden con los actualizados.");
+        }
+        return releido;
+    }
+
+    private void validarLlaveCompuesta(
+            UUID clavePoliza,
+            String nombres,
+            String primerApellido,
+            String segundoApellido,
+            LocalDate fechaNacimiento) {
+        if (clavePoliza == null) {
+            throw new SolicitudInvalidaException("La clave de la poliza es obligatoria.");
+        }
+        validarTextoConsulta(nombres, "El nombre");
+        validarTextoConsulta(primerApellido, "El primer apellido");
+        if (segundoApellido != null && !segundoApellido.trim().isEmpty()) {
+            validarSinDiagonales(segundoApellido, "El segundo apellido");
+        }
+        if (fechaNacimiento == null) {
+            throw new SolicitudInvalidaException("La fecha de nacimiento es obligatoria.");
+        }
+    }
+
+    private boolean coincideLlave(
+            Beneficiario beneficiario,
+            UUID clavePoliza,
+            String nombres,
+            String primerApellido,
+            String segundoApellidoNormalizado,
+            LocalDate fechaNacimiento) {
+        return Objects.equals(beneficiario.getClavePoliza(), clavePoliza)
+                && Objects.equals(beneficiario.getNombres(), nombres)
+                && Objects.equals(beneficiario.getPrimerApellido(), primerApellido)
+                && Objects.equals(
+                        normalizarSegundoApellido(beneficiario.getSegundoApellido()),
+                        segundoApellidoNormalizado)
+                && Objects.equals(beneficiario.getFechaNacimiento(), fechaNacimiento);
+    }
+
+    private String normalizarSegundoApellido(String segundoApellido) {
+        if (segundoApellido == null || segundoApellido.trim().isEmpty()) {
+            return null;
+        }
+        return segundoApellido;
     }
 
     private void exigirPolizaExistente(UUID clavePoliza) {
